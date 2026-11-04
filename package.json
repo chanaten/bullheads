@@ -1,0 +1,25 @@
+{
+  "name": "bullheads",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BULLHEADS! — a single-player 6nimmt! card game with arcade neon motion",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "simulate": "vitest run tests/simulation.test.ts"
+  },
+  "dependencies": {
+    "gsap": "^3.15.1",
+    "pixi.js": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}
