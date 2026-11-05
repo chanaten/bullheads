@@ -413,6 +413,17 @@ body {
   gap: 12px;
 }
 
+.tutorial-panel {
+  max-width: 560px;
+}
+
+.tutorial-body {
+  color: var(--ink);
+  line-height: 1.6;
+  font-size: 16px;
+  text-align: center;
+}
+
 .rule-line {
   color: var(--ink);
   line-height: 1.55;

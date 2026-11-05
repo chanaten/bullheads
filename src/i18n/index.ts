@@ -74,6 +74,35 @@ const en = {
   'end.menu': 'MAIN MENU',
 
   'rotate.rotate': 'Rotate your device to landscape',
+
+  'tut.step1.title': 'YOUR FIRST CARD',
+  'tut.step1.body':
+    'Every round, everyone plays one card at once — lowest first. A card lands on the row whose LAST card is the nearest lower number. Play the glowing 65!',
+  'tut.land.title': 'NEAREST LOWER WINS',
+  'tut.land.body':
+    'Your 65 landed on the row ending in 50 — the nearest lower number, not the row ending in 11. The row grew one card.',
+  'tut.step2.title': 'SMALL CARDS TOO',
+  'tut.step2.body': 'Play the glowing 13. Small cards are safe as long as they find a row to land on.',
+  'tut.fill.title': 'ROWS FILL UP',
+  'tut.fill.body':
+    'A row holds 5 cards. This one now has 4 — the next card landing there will be the 6th, and that player must take the whole row!',
+  'tut.step3.title': 'TRIGGER THE TAKE',
+  'tut.step3.body': 'Play the glowing 15 to fill the row. Watch what the next card does…',
+  'tut.take.title': 'SIX CARDS = TAKE IT!',
+  'tut.take.body':
+    'The 6th card makes its player TAKE the whole row — every bullhead becomes their penalty. Nyx just picked up 10 points!',
+  'tut.step4.title': 'LOWER THAN EVERYTHING',
+  'tut.step4.body':
+    'Play the glowing 4. It is lower than every row on the table — you will have to choose a row to take.',
+  'tut.done.title': 'FORCED CHOICE',
+  'tut.done.body':
+    'When your card beats every row, you must take one — usually the one with the fewest bullheads. Your card then starts that row again.',
+  'tut.finish.title': 'YOU ARE READY!',
+  'tut.finish.body':
+    'That is the whole game: dodge bullheads, bait others into takes, and finish with the fewest points. Good luck!',
+  'tut.next': 'NEXT',
+  'tut.skip': 'SKIP',
+  'tut.finish': 'DONE',
 } as const;
 
 export type StringKey = keyof typeof en;
@@ -142,6 +171,35 @@ const th: Record<StringKey, string> = {
   'end.menu': 'หน้าหลัก',
 
   'rotate.rotate': 'หมุนอุปกรณ์เป็นแนวนอน',
+
+  'tut.step1.title': 'ไพ่ใบแรกของคุณ',
+  'tut.step1.body':
+    'ทุกตาทุกคนวางไพ่พร้อมกัน — จากน้อยไปมาก ไพ่จะลงแถวที่เลขท้ายใกล้เคียงน้อยกว่าที่สุด เล่นไพ่ 65 ที่เรืองแสงเลย!',
+  'tut.land.title': 'ใกล้กว่าเท่านั้น',
+  'tut.land.body':
+    'ไพ่ 65 ของคุณลงแถวที่จบด้วย 50 — ใกล้เคียงที่สุด ไม่ใช่แถวที่จบด้วย 11 แถวใหญ่ขึ้นหนึ่งใบ',
+  'tut.step2.title': 'ไพ่เล็กก็สำคัญ',
+  'tut.step2.body': 'เล่นไพ่ 13 ที่เรืองแสง ไพ่เล็กปลอดภัยเสมอเมื่อมีแถวให้ลง',
+  'tut.fill.title': 'แถวเริ่มเต็ม',
+  'tut.fill.body':
+    'แถวหนึ่งมีได้ 5 ใบ ตอนนี้เหลือ4 — ไพ่ถัดไปที่ลงแถวนี้จะเป็นใบที่ 6 และผู้เล่นนั้นต้องรับไพ่ทั้งแถว!',
+  'tut.step3.title': 'จุดชนวนการรับไพ่',
+  'tut.step3.body': 'เล่นไพ่ 15 เพื่อเติมแถว ดูว่าไพ่ใบถัดไปจะเกิดอะไรขึ้น…',
+  'tut.take.title': 'หกใบ = รับเลย!',
+  'tut.take.body':
+    'ไพ่ใบที่ 6 ทำให้ผู้เล่นนั้นรับไพ่ทั้งแถว — หัวกระทิงทุกหัวกลายเป็นคะแนนโทษของพวกเขา ไนซ์เพิ่งรับไป10 แต้ม!',
+  'tut.step4.title': 'น้อยกว่าทุกแถว',
+  'tut.step4.body':
+    'เล่นไพ่ 4 ที่เรืองแสง มันน้อยกว่าทุกแถวบนโต๊ะ — คุณจะต้องเลือกรับหนึ่งแถว',
+  'tut.done.title': 'บังคับเลือกแถว',
+  'tut.done.body':
+    'เมื่อการ์ดของคุณน้อยกว่าทุกแถว คุณต้องรับหนึ่งแถว — มักเลือกแถวที่หัวกระทิงน้อยที่สุด แล้วการ์ดของคุณจะเริ่มแถวนั้นใหม่',
+  'tut.finish.title': 'พร้อมแล้ว!',
+  'tut.finish.body':
+    'นี่คือทั้งเกม: หลบหัวกระทิง หลอกให้คนอื่นรับไพ่ และจบด้วยคะแนนน้อยที่สุด ขอให้โชคดี!',
+  'tut.next': 'ถัดไป',
+  'tut.skip': 'ข้าม',
+  'tut.finish': 'เสร็จสิ้น',
 };
 
 const dicts: Record<Lang, Record<StringKey, string>> = { en, th };

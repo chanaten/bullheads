@@ -76,6 +76,7 @@ export class TableRenderer {
   private busy = false;
   private promptCard: number | null = null;
   private destroyed = false;
+  private guideCard: number | null = null;
   paused = false;
   private pauseWaiters: (() => void)[] = [];
   private readonly onWindowResize = (): void => this.relayout();
@@ -533,6 +534,7 @@ export class TableRenderer {
     c.cursor = 'pointer';
     c.on('pointerover', () => {
       if (!this.cb.canInput() || this.busy) return;
+      if (this.guideCard !== null && value !== this.guideCard) return;
       this.hovered = value;
       this.previewTarget(value);
       if (motionFull()) {
@@ -552,9 +554,25 @@ export class TableRenderer {
     c.on('pointerdown', (e) => {
       e.stopPropagation();
       if (!this.cb.canInput() || this.busy || this.paused) return;
+      if (this.guideCard !== null && value !== this.guideCard) return;
       if (this.selected === value) void this.confirmSelection();
       else this.select(value);
     });
+  }
+
+  /**
+   * Tutorial guide: highlight/lock the hand to one card (null clears).
+   * The guided card is selected so its target row shows immediately.
+   */
+  guideSelect(value: number | null): void {
+    this.guideCard = value;
+    if (value === null) {
+      this.selected = null;
+      this.setRowHighlight(null);
+      this.layoutHand(true);
+      return;
+    }
+    this.select(value);
   }
 
   private previewTarget(card: number): void {

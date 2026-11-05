@@ -78,9 +78,9 @@ export function startApp(app: Application): void {
   };
 
   const showTutorial = (): void => {
-    // Scripted demo lands in the tutorial milestone; for now the rules
-    // screen stands in so the button is never dead.
-    showRules(showMainMenu);
+    void import('./tutorial').then(({ startTutorial }) => {
+      startTutorial(app, showMainMenu);
+    });
   };
 
   showMainMenu();
