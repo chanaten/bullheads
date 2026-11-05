@@ -1,0 +1,181 @@
+/* BULLHEADS! — arcade neon shell */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --ink: #e8e6ff;
+  --ink-dim: #9a94d6;
+  --neon-cyan: #4df3ff;
+  --neon-magenta: #ff4dd8;
+  --neon-yellow: #ffd84d;
+  --panel: rgba(18, 16, 42, 0.92);
+  --panel-line: rgba(77, 243, 255, 0.35);
+}
+
+html,
+body {
+  height: 100%;
+  background: #0b0a1e;
+  color: var(--ink);
+  font-family: 'Segoe UI', 'SF Pro Display', system-ui, sans-serif;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* DOM overlay sits above the canvas; children re-enable pointer events. */
+#ui-root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#ui-root > * {
+  pointer-events: auto;
+}
+
+/* Portrait phones: ask for landscape (locked decision Q13). */
+#rotate-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #0b0a1e;
+  color: var(--ink);
+  font-size: 20px;
+  text-align: center;
+  padding: 24px;
+}
+
+#rotate-hint .rotate-icon {
+  font-size: 56px;
+  animation: rotate-nudge 1.6s ease-in-out infinite;
+}
+
+@keyframes rotate-nudge {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(78deg);
+  }
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate-hint {
+    display: flex;
+  }
+}
+
+/* ---- shared UI pieces (used by screens) ---- */
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.neon-title {
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-shadow:
+    0 0 6px var(--neon-cyan),
+    0 0 18px var(--neon-cyan),
+    0 0 42px rgba(77, 243, 255, 0.6);
+}
+
+.neon-sub {
+  color: var(--ink-dim);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+
+.arcade-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  padding: 12px 34px;
+  min-width: 240px;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.arcade-btn:hover,
+.arcade-btn:focus-visible {
+  border-color: var(--neon-cyan);
+  box-shadow:
+    0 0 10px rgba(77, 243, 255, 0.45),
+    inset 0 0 12px rgba(77, 243, 255, 0.12);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.arcade-btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.arcade-btn.primary {
+  color: #06232a;
+  background: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 16px rgba(77, 243, 255, 0.55);
+}
+
+.arcade-btn.primary:hover {
+  box-shadow:
+    0 0 22px rgba(77, 243, 255, 0.8),
+    inset 0 0 12px rgba(255, 255, 255, 0.35);
+}
+
+.gear-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 20px;
+  min-width: 0;
+  padding: 0;
+}
