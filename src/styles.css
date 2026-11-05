@@ -179,3 +179,133 @@ body {
   min-width: 0;
   padding: 0;
 }
+
+/* ---- overlays (scoreboard / match end) ---- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 5, 18, 0.72);
+  backdrop-filter: blur(3px);
+  animation: overlay-in 0.22s ease-out;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 16px;
+  padding: 28px 40px;
+  min-width: 340px;
+  box-shadow:
+    0 0 30px rgba(77, 243, 255, 0.18),
+    0 24px 60px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.panel-title {
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 12px rgba(77, 243, 255, 0.6);
+}
+
+.standings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.standing {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+}
+
+.standing.you {
+  border-color: var(--panel-line);
+  background: rgba(77, 243, 255, 0.08);
+}
+
+.standing.over .score {
+  color: var(--neon-magenta);
+}
+
+.standing .delta {
+  color: var(--ink-dim);
+  font-size: 13px;
+}
+
+.standing .score {
+  font-weight: 900;
+  color: var(--neon-yellow);
+  min-width: 40px;
+  text-align: right;
+}
+
+.banner {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.banner.win {
+  color: #fff;
+  text-shadow:
+    0 0 10px var(--neon-cyan),
+    0 0 30px var(--neon-cyan);
+  animation: banner-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.banner.lose {
+  color: #fff;
+  text-shadow:
+    0 0 10px var(--neon-magenta),
+    0 0 30px var(--neon-magenta);
+  animation: banner-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.banner.draw {
+  color: #fff;
+  text-shadow:
+    0 0 10px var(--neon-yellow),
+    0 0 30px var(--neon-yellow);
+  animation: banner-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes banner-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+.btn-row {
+  display: flex;
+  gap: 14px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--ink-dim);
+  letter-spacing: 0.1em;
+}

@@ -6,6 +6,7 @@
 import './styles.css';
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import { GlowFilter } from 'pixi-filters';
+import gsap from 'gsap';
 
 const BG = 0x12102a;
 const GRID = 0x2a2660;
@@ -68,6 +69,10 @@ function buildBackdrop(app: Application): { root: Container; redraw: () => void 
 }
 
 async function boot(): Promise<void> {
+  // Advance tweens by wall-time even in throttled/hidden tabs, so beats never
+  // crawl in slow motion when the window is occluded.
+  gsap.ticker.lagSmoothing(0);
+
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas');
   if (!canvas) throw new Error('missing #game-canvas');
 
@@ -83,9 +88,26 @@ async function boot(): Promise<void> {
 
   const backdrop = buildBackdrop(app);
   app.stage.addChild(backdrop.root);
-  app.renderer.on('resize', backdrop.redraw);
+  const onResize = (): void => backdrop.redraw();
+  app.renderer.on('resize', onResize);
 
-  // Screens (menu/settings/game) attach to #ui-root in the next milestone.
+  // TEMPORARY: the menu screen lands in the next milestone; for now boot
+  // straight into a match so the table can be verified end-to-end.
+  const { startGame } = await import('./ui/shell');
+  app.renderer.off('resize', onResize);
+  backdrop.root.destroy({ children: true });
+  const launch = (): void => {
+    const handle = startGame(app, 'normal', {
+      onRematch: () => {
+        handle.destroy();
+        launch();
+      },
+      onMenu: () => location.reload(), // replaced by the real menu later
+    });
+    void handle;
+  };
+  launch();
+
   document.documentElement.dataset.booted = 'true';
 }
 
