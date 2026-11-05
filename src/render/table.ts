@@ -156,6 +156,13 @@ export class TableRenderer {
         e.stopPropagation();
         if (this.rowChoiceActive) this.chooseRow(i);
       });
+      // same cyan outline as the card-hover target preview, driven by row hover
+      hit.on('pointerover', () => {
+        if (this.rowChoiceActive) this.setRowHighlight(i);
+      });
+      hit.on('pointerout', () => {
+        if (this.rowChoiceActive && this.highlightRow === i) this.setRowHighlight(null);
+      });
       this.rowHitAreas.push(hit);
       this.glowLayer.addChild(hit);
     }
@@ -822,6 +829,7 @@ export class TableRenderer {
     this.rowPrompt.visible = false;
     this.rowChoiceResolve = null;
     this.promptCard = null;
+    this.setRowHighlight(null);
     return row;
   }
 
