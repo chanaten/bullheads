@@ -6,6 +6,7 @@
  */
 
 import type { Application } from 'pixi.js';
+import gsap from 'gsap';
 import { chooseRow } from '../ai/bots';
 import { t, type StringKey } from '../i18n';
 import {
@@ -111,8 +112,8 @@ function showBanner(
   const row = el('div', 'btn-row');
   const next = el('button', 'arcade-btn primary', t(opts.final ? 'tut.finish' : 'tut.next'));
   row.appendChild(next);
-  const skip = el('button', 'arcade-btn ghost', t('tut.skip'));
-  if (!opts.final) row.appendChild(skip);
+  const leave = el('button', 'arcade-btn ghost danger', t('tut.leave'));
+  if (!opts.final) row.appendChild(leave);
   panel.appendChild(row);
   overlay.appendChild(panel);
   uiRoot().appendChild(overlay);
@@ -133,7 +134,7 @@ function showBanner(
     };
     window.addEventListener('keydown', onKey);
     next.addEventListener('click', () => resolve_('continue'));
-    if (!opts.final) skip.addEventListener('click', () => resolve_('skip'));
+    if (!opts.final) leave.addEventListener('click', () => resolve_('skip'));
   });
 }
 
@@ -154,7 +155,7 @@ export function startTutorial(app: Application, onFinish: () => void): void {
     },
     canInput: () => awaitingInput,
   });
-  (window as unknown as Record<string, unknown>).__bh = { table, tutorial: true };
+  (window as unknown as Record<string, unknown>).__bh = { table, tutorial: true, gsap };
 
   async function playRound(): Promise<void> {
     if (!script) return;
@@ -223,7 +224,8 @@ export function startTutorial(app: Application, onFinish: () => void): void {
       }
     }
 
-    updateSettings({ tutorialSeen: true });
+    // completed (not left early) marks the tutorial as seen
+    if (!skipped) updateSettings({ tutorialSeen: true });
     table.destroy();
     const w = window as unknown as Record<string, unknown>;
     if (w.__bh && (w.__bh as { table?: unknown }).table === table) delete w.__bh;

@@ -102,7 +102,7 @@ const en = {
   'tut.finish.body':
     'That is the whole game: dodge bullheads, bait others into takes, and finish with the fewest points. Good luck!',
   'tut.next': 'NEXT',
-  'tut.skip': 'SKIP',
+  'tut.leave': 'LEAVE',
   'tut.finish': 'DONE',
 } as const;
 
@@ -200,7 +200,7 @@ const th: Record<StringKey, string> = {
   'tut.finish.body':
     'นี่คือทั้งเกม: หลบหัวกระทิง หลอกให้คนอื่นรับไพ่ และจบด้วยคะแนนน้อยที่สุด ขอให้โชคดี!',
   'tut.next': 'ถัดไป',
-  'tut.skip': 'ข้าม',
+  'tut.leave': 'ออกจากบทเรียน',
   'tut.finish': 'เสร็จสิ้น',
 };
 
