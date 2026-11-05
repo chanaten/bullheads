@@ -66,6 +66,7 @@ const en = {
   'score.continue': 'NEXT HAND →',
   'score.results': 'RESULTS →',
   'score.hint': 'click or press space',
+  'score.peekHint': 'release Tab to hide',
 
   'end.win': 'YOU WIN!',
   'end.lose': 'DEFEAT',
@@ -163,6 +164,7 @@ const th: Record<StringKey, string> = {
   'score.continue': 'ตาต่อไป →',
   'score.results': 'ผลลัพธ์ →',
   'score.hint': 'คลิกหรือกด space',
+  'score.peekHint': 'ปล่อย Tab เพื่อซ่อน',
 
   'end.win': 'คุณชนะ!',
   'end.lose': 'แพ้',

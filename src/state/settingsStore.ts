@@ -4,7 +4,25 @@ import { type Settings, DEFAULT_SETTINGS, loadSettings, saveSettings } from './p
 
 type Listener = (s: Settings) => void;
 
+let hadSaved = false;
+try {
+  hadSaved = localStorage.getItem('bullheads.settings.v1') !== null;
+} catch {
+  hadSaved = false;
+}
+
 let current: Settings = loadSettings();
+
+// First run on a system that asks for reduced motion starts that way (Q28).
+if (
+  !hadSaved &&
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+) {
+  current = { ...current, motion: 'reduced' };
+}
+
 const listeners = new Set<Listener>();
 
 export function getSettings(): Settings {

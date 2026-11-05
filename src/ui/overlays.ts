@@ -1,19 +1,17 @@
 /**
  * DOM overlays for the match beats: end-of-hand scoreboard (Q16-D:
- * animated counters, click to continue) and the match-end screen (Q36:
- * banner + standings + Rematch/Main menu).
+ * animated counters, click to continue), a hold-Tab standings peek (Q19),
+ * and the match-end screen (Q36: banner + standings + Rematch/Main menu).
  */
 
 import type { MatchState } from '../engine/rules';
 import { MATCH_TARGET } from '../engine/rules';
 import { play } from '../audio/sfx';
-
-function root(): HTMLElement {
-  return document.getElementById('ui-root')!;
-}
+import { t } from '../i18n';
+import { clearScreens, el, uiRoot } from './dom';
 
 function clearOverlays(): void {
-  for (const el of root().querySelectorAll('.overlay')) el.remove();
+  for (const node of uiRoot().querySelectorAll('.overlay')) node.remove();
 }
 
 function standings(state: MatchState): { id: number; name: string; score: number; hand: number }[] {
@@ -33,50 +31,40 @@ function keyOnce(handler: () => void): () => void {
   return () => window.removeEventListener('keydown', onKey);
 }
 
+function standingRow(row: { id: number; name: string; score: number; hand: number }, showDelta: boolean): HTMLElement {
+  const div = el(
+    'div',
+    `standing${row.id === 0 ? ' you' : ''}${row.score >= MATCH_TARGET ? ' over' : ''}`,
+  );
+  div.innerHTML = `
+    <span class="who">${row.name}</span>
+    <span class="delta">${showDelta ? `+${row.hand}` : ''}</span>
+    <span class="score">${row.score}</span>
+  `;
+  return div;
+}
+
 /** End-of-hand scoreboard; resolves when the player continues. */
 export function showScoreboard(state: MatchState): Promise<void> {
   clearOverlays();
   play('handEnd');
   const matchEnding = state.players.some((p) => p.score >= MATCH_TARGET);
 
-  const overlay = document.createElement('div');
-  overlay.className = 'overlay';
-  overlay.innerHTML = `
-    <div class="panel scoreboard">
-      <div class="panel-title">HAND COMPLETE</div>
-      <div class="standings"></div>
-      <button class="arcade-btn primary continue">${matchEnding ? 'RESULTS →' : 'NEXT HAND →'}</button>
-      <div class="hint">click or press space</div>
-    </div>
-  `;
-  root().appendChild(overlay);
-
-  const list = overlay.querySelector('.standings')!;
-  for (const row of standings(state)) {
-    const div = document.createElement('div');
-    div.className = `standing${row.id === 0 ? ' you' : ''}${row.score >= MATCH_TARGET ? ' over' : ''}`;
-    div.innerHTML = `
-      <span class="who">${row.name}</span>
-      <span class="delta">+${row.hand}</span>
-      <span class="score">${row.score}</span>
-    `;
-    list.appendChild(div);
-    // count-up per row
-    const scoreEl = div.querySelector('.score')!;
-    const target = row.score;
-    const obj = { v: Math.max(0, target - row.hand) };
-    const tween = () => {
-      const start = performance.now();
-      const from = obj.v;
-      const step = (now: number): void => {
-        const p = Math.min(1, (now - start) / 550);
-        scoreEl.textContent = String(Math.round(from + (target - from) * p));
-        if (p < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    };
-    tween();
-  }
+  const overlay = el('div', 'overlay');
+  const panel = el('div', 'panel scoreboard');
+  panel.appendChild(el('div', 'panel-title', t('score.title')));
+  const list = el('div', 'standings');
+  for (const row of standings(state)) list.appendChild(standingRow(row, true));
+  panel.appendChild(list);
+  const cont = el(
+    'button',
+    'arcade-btn primary continue',
+    t(matchEnding ? 'score.results' : 'score.continue'),
+  );
+  panel.appendChild(cont);
+  panel.appendChild(el('div', 'hint', t('score.hint')));
+  overlay.appendChild(panel);
+  uiRoot().appendChild(overlay);
 
   return new Promise((resolve) => {
     const done = (): void => {
@@ -86,8 +74,22 @@ export function showScoreboard(state: MatchState): Promise<void> {
       resolve();
     };
     const off = keyOnce(done);
-    overlay.querySelector<HTMLButtonElement>('.continue')!.addEventListener('click', done);
+    cont.addEventListener('click', done);
   });
+}
+
+/** Read-only standings peek (hold Tab during a match, Q19). */
+export function showScorePeek(state: MatchState): () => void {
+  const overlay = el('div', 'overlay peek-overlay');
+  const panel = el('div', 'panel scoreboard');
+  panel.appendChild(el('div', 'panel-title', t('score.title')));
+  const list = el('div', 'standings');
+  for (const row of standings(state)) list.appendChild(standingRow(row, true));
+  panel.appendChild(list);
+  panel.appendChild(el('div', 'hint', t('score.peekHint')));
+  overlay.appendChild(panel);
+  uiRoot().appendChild(overlay);
+  return () => overlay.remove();
 }
 
 /** Match end: banner + final standings + Rematch / Main menu. */
@@ -97,37 +99,32 @@ export function showMatchEnd(
   actions: { onRematch: () => void; onMenu: () => void },
 ): Promise<void> {
   clearOverlays();
+  clearScreens();
   const won = winners.includes(0);
   const draw = won && winners.length > 1;
-  const title = draw ? 'DRAW!' : won ? 'YOU WIN!' : 'DEFEAT';
+  const title = draw ? t('end.draw') : won ? t('end.win') : t('end.lose');
   const tone = draw ? 'draw' : won ? 'win' : 'lose';
   play(won ? 'victory' : 'defeat');
 
-  const overlay = document.createElement('div');
-  overlay.className = `overlay match-end ${tone}`;
-  overlay.innerHTML = `
-    <div class="panel">
-      <div class="banner ${tone}">${title}</div>
-      <div class="standings final"></div>
-      <div class="btn-row">
-        <button class="arcade-btn primary rematch">REMATCH</button>
-        <button class="arcade-btn menu">MAIN MENU</button>
-      </div>
-    </div>
-  `;
-  root().appendChild(overlay);
-
-  const list = overlay.querySelector('.standings.final')!;
+  const overlay = el('div', `overlay match-end ${tone}`);
+  const panel = el('div', 'panel');
+  panel.appendChild(el('div', `banner ${tone}`, title));
+  const list = el('div', 'standings final');
   for (const row of standings(state)) {
-    const div = document.createElement('div');
     const crown = winners.includes(row.id) ? '👑 ' : '';
-    div.className = `standing${row.id === 0 ? ' you' : ''}`;
-    div.innerHTML = `
-      <span class="who">${crown}${row.name}</span>
-      <span class="score">${row.score}</span>
-    `;
+    const div = el('div', `standing${row.id === 0 ? ' you' : ''}`);
+    div.innerHTML = `<span class="who">${crown}${row.name}</span><span class="score">${row.score}</span>`;
     list.appendChild(div);
   }
+  panel.appendChild(list);
+  const rowBtns = el('div', 'btn-row');
+  const rematch = el('button', 'arcade-btn primary rematch', t('end.rematch'));
+  const menu = el('button', 'arcade-btn menu', t('end.menu'));
+  rowBtns.appendChild(rematch);
+  rowBtns.appendChild(menu);
+  panel.appendChild(rowBtns);
+  overlay.appendChild(panel);
+  uiRoot().appendChild(overlay);
 
   return new Promise((resolve) => {
     let settled = false;
@@ -141,11 +138,7 @@ export function showMatchEnd(
       resolve();
     };
     const off = keyOnce(() => finish(actions.onRematch)); // Enter = rematch
-    overlay.querySelector<HTMLButtonElement>('.rematch')!.addEventListener('click', () =>
-      finish(actions.onRematch),
-    );
-    overlay.querySelector<HTMLButtonElement>('.menu')!.addEventListener('click', () =>
-      finish(actions.onMenu),
-    );
+    rematch.addEventListener('click', () => finish(actions.onRematch));
+    menu.addEventListener('click', () => finish(actions.onMenu));
   });
 }
