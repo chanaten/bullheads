@@ -18,7 +18,7 @@ import { play } from '../audio/sfx';
 import { onLanguageChange, t } from '../i18n';
 import { createBackStack, createCard, type CardView } from './card';
 import { burst, dur, flyArc, flipCard, motionFull, settle, shake, wait } from './motion';
-import { COLORS, computeLayout, SEAT_SIDE, type Layout } from './theme';
+import { COLORS, computeLayout, type Layout } from './theme';
 
 const BOT_COLORS = [COLORS.cyan, 0xb64dff, 0xffb84d, 0xff4dd8, 0x4dff9e];
 /** Per-seat reveal rhythm — a light touch of bot personality (Q14). */
@@ -193,9 +193,8 @@ export class TableRenderer {
       }
       const st = this.stacks[i];
       if (st && i !== 0) {
-        const offset = Math.min(58, L.screenW * 0.05);
-        st.x = seat.x + (SEAT_SIDE[i] === 'left' ? offset : -offset);
-        st.y = seat.y;
+        st.x = L.piles[i].x;
+        st.y = L.piles[i].y;
       }
       this.layoutBadge(i);
     }
@@ -454,12 +453,11 @@ export class TableRenderer {
 
   private buildStack(player: number, count: number): Container {
     const L = this.layout;
-    const seat = L.seats[player];
+    const pile = L.piles[player];
     const stack = createBackStack(L.handCard, count);
-    // just inboard of the avatar, clear of the screen edge
-    const offset = Math.min(58, L.screenW * 0.05);
-    stack.x = seat.x + (SEAT_SIDE[player] === 'left' ? offset : -offset);
-    stack.y = seat.y;
+    // outer edge of the side seat — clear of the avatar and name
+    stack.x = pile.x;
+    stack.y = pile.y;
     return stack;
   }
 

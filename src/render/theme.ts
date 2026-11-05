@@ -47,6 +47,8 @@ export interface Layout {
   staging: { x: number; y: number }[];
   /** Seat anchors (avatar + stack + score badge). */
   seats: { x: number; y: number }[];
+  /** Opponent card-pile anchors (outer edge of each side seat). */
+  piles: { x: number; y: number }[];
   /** Score badge anchors (per seat). */
   badges: { x: number; y: number }[];
   roundLine: { x: number; y: number; w: number };
@@ -85,36 +87,44 @@ export function computeLayout(w: number, h: number): Layout {
   const handCard = rowCard;
   const handY = rowsBottom + rowGapY * 2 + rowCard.h;
 
-  // Seats: two per side, vertically centered around the rows band.
-  const seatX = pad + w * 0.055;
+  // Seats: each side seat is a column reading outward-in:
+  //   [card pile] → [avatar + name] → [staging] → [rows]
+  // so piles never overlap the icon/name and commits fly behind them.
+  const pileHalf = rowCard.w * 0.57; // visual width incl. back-stack offset
+  const avatarHalf = 26;
+  const leftPileX = pad + pileHalf + 4;
+  const leftAvatarX = leftPileX + pileHalf + 14 + avatarHalf;
   const avatarY = handY + rowCard.h + 34;
   const seats: { x: number; y: number }[] = [{ x: w / 2, y: avatarY }];
   const sideY = [rowOriginY + rowsH * 0.28, rowOriginY + rowsH * 0.72];
-  seats.push({ x: seatX, y: sideY[0] });
-  seats.push({ x: seatX, y: sideY[1] });
-  seats.push({ x: w - seatX, y: sideY[0] });
-  seats.push({ x: w - seatX, y: sideY[1] });
+  seats.push({ x: leftAvatarX, y: sideY[0] });
+  seats.push({ x: leftAvatarX, y: sideY[1] });
+  seats.push({ x: w - leftAvatarX, y: sideY[0] });
+  seats.push({ x: w - leftAvatarX, y: sideY[1] });
 
-  // Staging: your card rises to the band between rows and hand; bot cards
-  // commit beside their seats.
+  const piles: { x: number; y: number }[] = [{ x: w / 2, y: avatarY }];
+  piles.push({ x: leftPileX, y: sideY[0] });
+  piles.push({ x: leftPileX, y: sideY[1] });
+  piles.push({ x: w - leftPileX, y: sideY[0] });
+  piles.push({ x: w - leftPileX, y: sideY[1] });
+
+  // Staging sits midway between the avatar group and the rows so cards
+  // never collide with either. Your card rises to the band above the hand.
   const staging: { x: number; y: number }[] = [
     { x: w / 2, y: rowsBottom + rowGapY + rowCard.h / 2 },
   ];
-  for (const side of ['left', 'right'] as const) {
-    for (let i = 0; i < 2; i++) {
-      const s = side === 'left' ? seats[1 + i] : seats[3 + i];
-      staging.push({
-        x: side === 'left' ? s.x + w * 0.11 : s.x - w * 0.11,
-        y: s.y,
-      });
-    }
-  }
+  const leftStagingX = (leftAvatarX + avatarHalf + rowOriginX) / 2;
+  staging.push({ x: leftStagingX, y: sideY[0] });
+  staging.push({ x: leftStagingX, y: sideY[1] });
+  staging.push({ x: w - leftStagingX, y: sideY[0] });
+  staging.push({ x: w - leftStagingX, y: sideY[1] });
   // Staging order must match seat ids: [0]=bottom, [1][2]=left, [3][4]=right.
 
+  // Opponent score badges sit directly under their card piles.
   const badges = seats.map((s, i) =>
     i === 0
       ? { x: w - pad - 42, y: avatarY }
-      : { x: s.x + (i <= 2 ? w * 0.048 : -w * 0.048), y: s.y + rowCard.h * 0.62 + 20 },
+      : { x: piles[i].x, y: s.y + rowCard.h * 0.5 + 24 },
   );
 
   const roundLine = {
@@ -136,6 +146,7 @@ export function computeLayout(w: number, h: number): Layout {
     handY,
     staging,
     seats,
+    piles,
     badges,
     roundLine,
   };
