@@ -1,16 +1,16 @@
 /**
  * Audio: ambient music + physical card SFX (Q38).
  *
- * Music: "Chill lofi inspired [loop edit]" by qubodup (OpenGameArt) —
- * CC0 / public domain, bundled locally. Swap the .ogg file to change the
- * mood; the volume slider and loop handling stay the same.
+ * Music: bundled locally (src/audio/) and looped through the volume
+ * slider. Drop a new .mp3/.ogg in that folder and point the import below
+ * at it to change the track. Ambient music pauses with the tab.
  *
  * SFX are synthesized with Web Audio (no assets) and respect the SFX
  * volume setting live. Both start on the first user gesture (autoplay
  * policy).
  */
 
-import loopUrl from './chill-loop.ogg';
+import loopUrl from './hitslab_lofi.mp3';
 import { getSettings, onSettingsChange } from '../state/settingsStore';
 import type { SfxName } from './names';
 
