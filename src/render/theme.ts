@@ -59,12 +59,15 @@ export const ROW_SLOTS = 6; // max visible in a row (5 + incoming)
 export function computeLayout(w: number, h: number): Layout {
   const pad = Math.max(12, w * 0.015);
   const topMargin = 46;
-  const bottomStrip = 80;
+  const bottomStrip = 44; // round line + breathing room under the hand
 
   // One shared card size for rows and hand (hand never overlaps): the
-  // vertical budget covers rows band + staging band + hand band.
+  // vertical budget covers rows band + staging band + hand band. The
+  // width term keeps the hand clear of the bottom-right corner stack
+  // (YOU avatar + score badge).
   const rowCardH = Math.min(
     (h - topMargin - bottomStrip) / 6.7,
+    (w / 2 - pad - 83) / 3.925,
     (w * 0.92) / 7.85,
     h * 0.17,
   );
@@ -85,7 +88,7 @@ export function computeLayout(w: number, h: number): Layout {
 
   // Hand: same size as the row cards, spaced with the same gap — no overlap.
   const handCard = rowCard;
-  const handY = rowsBottom + rowGapY * 2 + rowCard.h;
+  const handY = h - bottomStrip - rowCard.h;
 
   // Seats: each side seat is a column reading outward-in:
   //   [card pile] → [avatar + name] → [staging] → [rows]
@@ -94,9 +97,11 @@ export function computeLayout(w: number, h: number): Layout {
   const avatarHalf = 26;
   const leftPileX = pad + pileHalf + 4;
   const leftAvatarX = leftPileX + pileHalf + 14 + avatarHalf;
-  const avatarY = handY + rowCard.h + 34;
-  const seats: { x: number; y: number }[] = [{ x: w / 2, y: avatarY }];
   const sideY = [rowOriginY + rowsH * 0.28, rowOriginY + rowsH * 0.72];
+  // YOU sits in the bottom-right corner: avatar + name above the badge.
+  const cornerX = w - pad - 42;
+  const avatarY = h - 90;
+  const seats: { x: number; y: number }[] = [{ x: cornerX, y: avatarY }];
   seats.push({ x: leftAvatarX, y: sideY[0] });
   seats.push({ x: leftAvatarX, y: sideY[1] });
   seats.push({ x: w - leftAvatarX, y: sideY[0] });
@@ -120,16 +125,17 @@ export function computeLayout(w: number, h: number): Layout {
   staging.push({ x: w - leftStagingX, y: sideY[1] });
   // Staging order must match seat ids: [0]=bottom, [1][2]=left, [3][4]=right.
 
-  // Opponent score badges sit directly under their card piles.
+  // Opponent score badges sit directly under their card piles; YOU's badge
+  // sits in the bottom-right corner under the avatar.
   const badges = seats.map((s, i) =>
     i === 0
-      ? { x: w - pad - 42, y: avatarY }
+      ? { x: cornerX, y: h - 26 }
       : { x: piles[i].x, y: s.y + rowCard.h * 0.5 + 24 },
   );
 
   const roundLine = {
     x: pad + 14,
-    y: avatarY + 18,
+    y: h - 18,
     w: Math.min(200, w * 0.16),
   };
 
