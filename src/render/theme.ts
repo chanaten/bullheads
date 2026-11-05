@@ -54,7 +54,7 @@ export interface Layout {
   roundLine: { x: number; y: number; w: number };
 }
 
-const ROW_SLOTS = 6; // max visible in a row (5 + incoming)
+export const ROW_SLOTS = 6; // max visible in a row (5 + incoming)
 
 export function computeLayout(w: number, h: number): Layout {
   const pad = Math.max(12, w * 0.015);

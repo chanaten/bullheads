@@ -18,7 +18,7 @@ import { play } from '../audio/sfx';
 import { onLanguageChange, t } from '../i18n';
 import { createBackStack, createCard, type CardView } from './card';
 import { burst, dur, flyArc, flipCard, motionFull, settle, shake, wait } from './motion';
-import { COLORS, computeLayout, type Layout } from './theme';
+import { COLORS, computeLayout, ROW_SLOTS, type Layout } from './theme';
 
 const BOT_COLORS = [COLORS.cyan, 0xb64dff, 0xffb84d, 0xff4dd8, 0x4dff9e];
 /** Per-seat reveal rhythm — a light touch of bot personality (Q14). */
@@ -40,6 +40,7 @@ export class TableRenderer {
   private readonly app: Application;
   private readonly cb: TableCallbacks;
   private readonly root = new Container();
+  private readonly matLayer = new Container();
   private readonly tableLayer = new Container();
   private readonly cardLayer = new Container();
   private readonly hudLayer = new Container();
@@ -86,8 +87,9 @@ export class TableRenderer {
     this.cb = cb;
     this.layout = computeLayout(app.screen.width, app.screen.height);
 
-    this.root.addChild(this.tableLayer, this.glowLayer, this.cardLayer, this.hudLayer, this.fxLayer);
+    this.root.addChild(this.matLayer, this.tableLayer, this.glowLayer, this.cardLayer, this.hudLayer, this.fxLayer);
     this.root.label = 'root';
+    this.matLayer.label = 'mat';
     this.tableLayer.label = 'table';
     this.cardLayer.label = 'cards';
     this.hudLayer.label = 'hud';
@@ -188,6 +190,8 @@ export class TableRenderer {
     this.app.stage.hitArea = this.app.screen;
     const L = this.layout;
 
+    this.drawMat();
+
     this.rowCards.forEach((row, r) => row.forEach((c, i) => this.placeRowCard(c, r, i)));
     this.layoutHand(false);
 
@@ -241,6 +245,35 @@ export class TableRenderer {
     const L = this.layout;
     c.container.x = L.rowOriginX + index * (L.rowCard.w + L.rowGapX) + L.rowCard.w / 2;
     c.container.y = L.rowY(row) + L.rowCard.h / 2;
+  }
+
+  /**
+   * The playmat: transparent slot outlines under every row — five white
+   * slots (a row holds 5 cards) plus a red danger slot at the 6th
+   * position (landing there means taking the row).
+   */
+  private drawMat(): void {
+    const L = this.layout;
+    this.matLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    for (let r = 0; r < 4; r++) {
+      for (let s = 0; s < ROW_SLOTS; s++) {
+        const g = new Graphics();
+        const x = L.rowOriginX + s * (L.rowCard.w + L.rowGapX);
+        const y = L.rowY(r);
+        const danger = s === ROW_SLOTS - 1;
+        g.roundRect(x, y, L.rowCard.w, L.rowCard.h, L.rowCard.radius);
+        g.fill({
+          color: danger ? COLORS.danger : 0xffffff,
+          alpha: danger ? 0.12 : 0.045,
+        });
+        g.stroke({
+          width: Math.max(1, L.rowCard.h * 0.015),
+          color: danger ? COLORS.danger : 0xffffff,
+          alpha: danger ? 0.42 : 0.16,
+        });
+        this.matLayer.addChild(g);
+      }
+    }
   }
 
   /** Hand spacing: cards sit side by side with a gap, never overlapping. */
