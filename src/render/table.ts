@@ -189,7 +189,7 @@ export class TableRenderer {
       const av = this.avatars[i];
       if (av) {
         av.x = seat.x;
-        av.y = i === 0 ? seat.y - L.handCard.h - 46 : seat.y;
+        av.y = seat.y;
       }
       const st = this.stacks[i];
       if (st && i !== 0) {
@@ -237,6 +237,20 @@ export class TableRenderer {
     c.container.y = L.rowY(row) + L.rowCard.h / 2;
   }
 
+  /** Hand spacing: cards sit side by side with a gap, never overlapping. */
+  private handStep(n: number): number {
+    const L = this.layout;
+    const gap = L.handCard.w * 0.1;
+    const ideal = L.handCard.w + gap;
+    const total = L.handCard.w + (n - 1) * ideal;
+    if (total <= L.screenW * 0.94) return ideal;
+    // extreme window: shrink the gap first, overlap only as a last resort
+    return Math.max(
+      L.handCard.w * 0.6,
+      (L.screenW * 0.94 - L.handCard.w) / Math.max(1, n - 1),
+    );
+  }
+
   private rowRect(row: number): { x: number; y: number; w: number; h: number } {
     const L = this.layout;
     return {
@@ -251,7 +265,7 @@ export class TableRenderer {
     const L = this.layout;
     const n = this.handOrder.length;
     if (n === 0) return;
-    const step = Math.min(L.handCard.w * 0.78, (L.screenW * 0.82) / n);
+    const step = this.handStep(n);
     const totalW = L.handCard.w + (n - 1) * step;
     const startX = (L.screenW - totalW) / 2 + L.handCard.w / 2;
     this.handOrder.forEach((value, i) => {
@@ -380,7 +394,7 @@ export class TableRenderer {
       const seat = L.seats[i];
       const av = this.buildAvatar(i, state.players[i].name);
       av.x = seat.x;
-      av.y = i === 0 ? seat.y - L.handCard.h - 46 : seat.y;
+      av.y = seat.y;
       av.alpha = 0;
       this.avatars.push(av);
       this.hudLayer.addChild(av);
@@ -411,11 +425,11 @@ export class TableRenderer {
     // hand: fan up from below, x preset to final slot (only y+alpha animate)
     this.handOrder = [...state.players[0].hand];
     const n = this.handOrder.length;
-    const step = Math.min(L.handCard.w * 0.78, (L.screenW * 0.82) / n);
+    const step = this.handStep(n);
     const totalW = L.handCard.w + (n - 1) * step;
     const startX = (L.screenW - totalW) / 2 + L.handCard.w / 2;
     this.handOrder.forEach((value, i) => {
-      const view = createCard(value, L.handCard, { visibleWidth: step });
+      const view = createCard(value, L.handCard);
       this.handCards.set(value, view);
       this.cardLayer.addChild(view.container);
       view.container.x = startX + i * step;

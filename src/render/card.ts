@@ -44,17 +44,8 @@ export interface CardView {
   showBack: () => void;
 }
 
-export interface CardOptions {
-  /**
-   * Width guaranteed visible (hand cards overlap their neighbour's right
-   * edge). Face content is sized and centered inside this strip so numbers
-   * are never half-covered. Defaults to the full card width.
-   */
-  visibleWidth?: number;
-}
-
 /** A card that can display either its face or its back (for flips). */
-export function createCard(value: number, m: CardMetrics, opts: CardOptions = {}): CardView {
+export function createCard(value: number, m: CardMetrics): CardView {
   const container = new Container();
 
   // ---------- face ----------
@@ -66,10 +57,7 @@ export function createCard(value: number, m: CardMetrics, opts: CardOptions = {}
   const foil = value >= 70;
 
   const pad = m.w * 0.06;
-  const visible = Math.max(m.w * 0.4, Math.min(opts.visibleWidth ?? m.w, m.w));
-  const maxContentW = visible - pad;
-  // content sits centered inside the visible strip
-  const contentX = -m.w / 2 + visible / 2;
+  const maxContentW = m.w - pad * 2;
 
   const bg = new Graphics();
   roundedRect(bg, m.w, m.h, m.radius);
@@ -101,7 +89,7 @@ export function createCard(value: number, m: CardMetrics, opts: CardOptions = {}
   }
 
   const label = String(value);
-  // Arial Black digit ≈ 0.62em wide — fit the visible strip
+  // Arial Black digit ≈ 0.62em wide — fit the card width
   const fontSize = Math.min(
     Math.floor(m.h * 0.4),
     Math.floor(maxContentW / (label.length * 0.62)),
@@ -116,23 +104,17 @@ export function createCard(value: number, m: CardMetrics, opts: CardOptions = {}
     },
   });
   num.anchor.set(0.5);
-  num.x = contentX;
+  num.x = 0;
   num.y = -m.h * 0.08;
   face.addChild(num);
 
-  // bullhead icons in one adaptive row, also inside the visible strip
+  // bullhead icons in one adaptive row, centered under the number
   const gap = Math.max(1, m.h * 0.025);
   const iconS = Math.min(m.h * 0.14, maxContentW / bh - gap);
   const rowW = bh * iconS + (bh - 1) * gap;
   const icons = new Graphics();
   for (let i = 0; i < bh; i++) {
-    drawBullhead(
-      icons,
-      contentX - rowW / 2 + iconS / 2 + i * (iconS + gap),
-      m.h * 0.27,
-      iconS,
-      danger,
-    );
+    drawBullhead(icons, -rowW / 2 + iconS / 2 + i * (iconS + gap), m.h * 0.27, iconS, danger);
   }
   face.addChild(icons);
 

@@ -55,16 +55,21 @@ export interface Layout {
 const ROW_SLOTS = 6; // max visible in a row (5 + incoming)
 
 export function computeLayout(w: number, h: number): Layout {
-  const landscape = w >= h;
   const pad = Math.max(12, w * 0.015);
+  const topMargin = 46;
+  const bottomStrip = 80;
 
-  // Row cards: fit4 rows vertically in the central band.
-  const rowBandH = h * (landscape ? 0.66 : 0.6);
-  const rowCardH = Math.min((rowBandH - 3 * (h * 0.02)) / 4, h * 0.16);
+  // One shared card size for rows and hand (hand never overlaps): the
+  // vertical budget covers rows band + staging band + hand band.
+  const rowCardH = Math.min(
+    (h - topMargin - bottomStrip) / 6.7,
+    (w * 0.92) / 7.85,
+    h * 0.17,
+  );
   const rowCard: CardMetrics = {
     h: rowCardH,
     w: rowCardH * 0.72,
-    radius: Math.max(4, rowCardH * 0.09),
+    radius: Math.max(4, rowCardH * 0.08),
   };
   const rowGapX = rowCard.w * 0.1;
   const rowGapY = rowCard.h * 0.14;
@@ -72,29 +77,29 @@ export function computeLayout(w: number, h: number): Layout {
   const rowsW = ROW_SLOTS * rowCard.w + (ROW_SLOTS - 1) * rowGapX;
   const rowsH = 4 * rowCard.h + 3 * rowGapY;
   const rowOriginX = (w - rowsW) / 2;
-  const rowOriginY = (h - rowsH) / 2 - h * 0.03;
+  const rowOriginY = topMargin;
   const rowY = (i: number) => rowOriginY + i * (rowCard.h + rowGapY);
+  const rowsBottom = rowOriginY + rowsH;
 
-  // Hand: bottom band, larger cards, overlapping when many.
-  const handCardH = Math.min(h * 0.2, (h * 0.26));
-  const handCard: CardMetrics = {
-    h: handCardH,
-    w: handCardH * 0.72,
-    radius: Math.max(6, handCardH * 0.08),
-  };
-  const handY = h - handCard.h - pad - h * 0.045;
+  // Hand: same size as the row cards, spaced with the same gap — no overlap.
+  const handCard = rowCard;
+  const handY = rowsBottom + rowGapY * 2 + rowCard.h;
 
   // Seats: two per side, vertically centered around the rows band.
   const seatX = pad + w * 0.055;
-  const seats: { x: number; y: number }[] = [{ x: w / 2, y: h - pad - 4 }];
+  const avatarY = handY + rowCard.h + 34;
+  const seats: { x: number; y: number }[] = [{ x: w / 2, y: avatarY }];
   const sideY = [rowOriginY + rowsH * 0.28, rowOriginY + rowsH * 0.72];
   seats.push({ x: seatX, y: sideY[0] });
   seats.push({ x: seatX, y: sideY[1] });
   seats.push({ x: w - seatX, y: sideY[0] });
   seats.push({ x: w - seatX, y: sideY[1] });
 
-  // Staging: between seat and rows.
-  const staging: { x: number; y: number }[] = [{ x: w / 2, y: handY - handCard.h * 0.85 }];
+  // Staging: your card rises to the band between rows and hand; bot cards
+  // commit beside their seats.
+  const staging: { x: number; y: number }[] = [
+    { x: w / 2, y: rowsBottom + rowGapY + rowCard.h / 2 },
+  ];
   for (const side of ['left', 'right'] as const) {
     for (let i = 0; i < 2; i++) {
       const s = side === 'left' ? seats[1 + i] : seats[3 + i];
@@ -108,14 +113,14 @@ export function computeLayout(w: number, h: number): Layout {
 
   const badges = seats.map((s, i) =>
     i === 0
-      ? { x: s.x, y: s.y - 10 }
-      : { x: s.x + (i <= 2 ? w * 0.045 : -w * 0.045), y: s.y + h * 0.075 },
+      ? { x: w - pad - 42, y: avatarY }
+      : { x: s.x + (i <= 2 ? w * 0.048 : -w * 0.048), y: s.y + rowCard.h * 0.62 + 20 },
   );
 
   const roundLine = {
-    x: w / 2 - Math.min(240, w * 0.2),
-    y: handY - handCard.h * 0.28,
-    w: Math.min(480, w * 0.4),
+    x: pad + 14,
+    y: avatarY + 18,
+    w: Math.min(200, w * 0.16),
   };
 
   return {
