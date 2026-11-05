@@ -1,43 +1,33 @@
 /**
- * Procedural audio (Q38): chill lo-fi music loop + physical card SFX,
- * synthesized with Web Audio — no assets, no licensing, no network.
+ * Audio: ambient music + physical card SFX (Q38).
  *
- * Everything is created lazily on the first user gesture (autoplay policy)
- * and respects the music/SFX volume settings live.
+ * Music: "Chill lofi inspired [loop edit]" by qubodup (OpenGameArt) —
+ * CC0 / public domain, bundled locally. Swap the .ogg file to change the
+ * mood; the volume slider and loop handling stay the same.
+ *
+ * SFX are synthesized with Web Audio (no assets) and respect the SFX
+ * volume setting live. Both start on the first user gesture (autoplay
+ * policy).
  */
 
+import loopUrl from './chill-loop.ogg';
 import { getSettings, onSettingsChange } from '../state/settingsStore';
 import type { SfxName } from './names';
 
-const MUSIC_LEVEL = 0.42; // headroom under SFX
-
-/** One chord per bar: Cmaj7 → Am7 → Dm7 → G7 (classic lo-fi loop). */
-const CHORDS: number[][] = [
-  [261.63, 329.63, 392.0, 493.88],
-  [220.0, 261.63, 329.63, 392.0],
-  [146.83, 174.61, 220.0, 261.63],
-  [196.0, 246.94, 293.66, 349.23],
-];
-const ROOTS = [130.81, 110.0, 73.42, 98.0];
-const BPM = 72;
-const BEAT = 60 / BPM;
-const BAR = BEAT * 4;
-
 class AudioEngine {
   private ctx: AudioContext | null = null;
-  private musicGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private noiseBuf: AudioBuffer | null = null;
-  private nextBarTime = 0;
-  private barIndex = 0;
+  private music: HTMLAudioElement | null = null;
   private musicRunning = false;
 
-  /** Create/resume the context. Safe to call often. */
+  /** Create/resume the audio contexts. Safe to call often. */
   ensure(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     if (!this.ctx) {
       const AC: typeof AudioContext | undefined =
-        window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AC) return null;
       try {
         this.ctx = new AC();
@@ -46,15 +36,11 @@ class AudioEngine {
       }
       const ctx = this.ctx;
 
-      this.musicGain = ctx.createGain();
-      this.musicGain.gain.value = getSettings().music * MUSIC_LEVEL;
-      this.musicGain.connect(ctx.destination);
-
       this.sfxGain = ctx.createGain();
       this.sfxGain.gain.value = getSettings().sfx;
       this.sfxGain.connect(ctx.destination);
 
-      // shared white-noise buffer for SFX + vinyl crackle
+      // shared white-noise buffer for SFX
       const len = Math.floor(ctx.sampleRate * 2);
       this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
       const data = this.noiseBuf.getChannelData(0);
@@ -62,120 +48,36 @@ class AudioEngine {
 
       // singleton lives for the app's lifetime — listener stays registered
       onSettingsChange((s) => {
-        this.musicGain?.gain.setTargetAtTime(s.music * MUSIC_LEVEL, ctx.currentTime, 0.05);
         this.sfxGain?.gain.setTargetAtTime(s.sfx, ctx.currentTime, 0.05);
+        if (this.music) this.music.volume = s.music * MUSIC_LEVEL;
       });
 
       document.addEventListener('visibilitychange', () => {
-        if (!this.musicRunning) return;
-        if (document.hidden) void this.ctx?.suspend();
-        else void this.ctx?.resume();
+        if (!this.music || !this.musicRunning) return;
+        if (document.hidden) this.music.pause();
+        else void this.music.play().catch(() => undefined);
       });
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
     return this.ctx;
   }
 
-  /** Start the lo-fi loop (idempotent). */
+  /** Start the ambient loop (idempotent). */
   startMusic(): void {
+    if (this.musicRunning) return;
     const ctx = this.ensure();
-    if (!ctx || this.musicRunning) return;
+    if (!ctx) return;
+    if (!this.music) {
+      this.music = new Audio(loopUrl);
+      this.music.loop = true;
+      this.music.preload = 'auto';
+      this.music.volume = getSettings().music * MUSIC_LEVEL;
+    }
     this.musicRunning = true;
-    this.nextBarTime = ctx.currentTime + 0.1;
-    this.barIndex = 0;
-    this.scheduleCrackle(ctx);
-    setInterval(() => this.tick(), 40);
-  }
-
-  private tick(): void {
-    const ctx = this.ctx;
-    if (!ctx || !this.musicRunning) return;
-    while (this.nextBarTime < ctx.currentTime + 0.25) {
-      this.scheduleBar(ctx, this.nextBarTime, this.barIndex);
-      this.nextBarTime += BAR;
-      this.barIndex++;
-    }
-  }
-
-  private scheduleCrackle(ctx: AudioContext): void {
-    if (!this.noiseBuf || !this.musicGain) return;
-    const src = ctx.createBufferSource();
-    src.buffer = this.noiseBuf;
-    src.loop = true;
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 2500;
-    const g = ctx.createGain();
-    g.gain.value = 0.012;
-    src.connect(hp).connect(g).connect(this.musicGain);
-    src.start();
-  }
-
-  private scheduleBar(ctx: AudioContext, t0: number, bar: number): void {
-    if (!this.musicGain) return;
-    const chord = CHORDS[bar % CHORDS.length];
-    const root = ROOTS[bar % ROOTS.length];
-
-    // pads: soft detuned triangles through a muffled lowpass
-    for (const [i, freq] of chord.entries()) {
-      for (const detune of [-5, 5]) {
-        const osc = ctx.createOscillator();
-        osc.type = 'triangle';
-        osc.frequency.value = freq;
-        osc.detune.value = detune;
-        const lp = ctx.createBiquadFilter();
-        lp.type = 'lowpass';
-        lp.frequency.value = 1300;
-        const g = ctx.createGain();
-        const peak = 0.05 * (i === 0 ? 1.2 : 1);
-        g.gain.setValueAtTime(0.0001, t0);
-        g.gain.exponentialRampToValueAtTime(peak, t0 + 0.18);
-        g.gain.setTargetAtTime(0.0001, t0 + BAR * 0.85, 0.25);
-        osc.connect(lp).connect(g).connect(this.musicGain);
-        osc.start(t0);
-        osc.stop(t0 + BAR + 1);
-      }
-    }
-
-    // bass: root on beat 1 and a nudge on beat 3
-    for (const [beat, gain] of [
-      [0, 0.14],
-      [2.5, 0.09],
-    ] as const) {
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = root;
-      const g = ctx.createGain();
-      const bt = t0 + beat * BEAT;
-      g.gain.setValueAtTime(0.0001, bt);
-      g.gain.exponentialRampToValueAtTime(gain, bt + 0.05);
-      g.gain.setTargetAtTime(0.0001, bt + BEAT * 0.8, 0.15);
-      osc.connect(g).connect(this.musicGain);
-      osc.start(bt);
-      osc.stop(bt + BEAT + 0.6);
-    }
-
-    // soft kick: beats 1 and 3
-    for (const beat of [0, 2]) {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      const bt = t0 + beat * BEAT;
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(130, bt);
-      osc.frequency.exponentialRampToValueAtTime(45, bt + 0.1);
-      g.gain.setValueAtTime(0.0001, bt);
-      g.gain.exponentialRampToValueAtTime(0.18, bt + 0.01);
-      g.gain.setTargetAtTime(0.0001, bt + 0.1, 0.06);
-      osc.connect(g).connect(this.musicGain);
-      osc.start(bt);
-      osc.stop(bt + 0.4);
-    }
-
-    // brushed hats on offbeats, quiet and slightly lazy
-    for (let b = 0; b < 4; b++) {
-      const bt = t0 + (b + 0.5) * BEAT;
-      this.noiseBurst(ctx, bt, 0.03, 6500, 'highpass', 0.03, this.musicGain);
-    }
+    void this.music.play().catch(() => {
+      // autoplay refused — will retry on the next user gesture
+      this.musicRunning = false;
+    });
   }
 
   // ------------------------------------------------------------ SFX utils
@@ -289,14 +191,23 @@ class AudioEngine {
   }
 
   /** Diagnostics for tests/UI. */
-  state(): { hasContext: boolean; musicRunning: boolean; ctxState: string | null } {
+  state(): {
+    hasContext: boolean;
+    musicRunning: boolean;
+    musicPlaying: boolean;
+    ctxState: string | null;
+  } {
     return {
       hasContext: this.ctx !== null,
       musicRunning: this.musicRunning,
+      musicPlaying: !!this.music && !this.music.paused,
       ctxState: this.ctx?.state ?? null,
     };
   }
 }
+
+/** Keep ambient music well under the SFX layer. */
+const MUSIC_LEVEL = 0.55;
 
 export const audio = new AudioEngine();
 
