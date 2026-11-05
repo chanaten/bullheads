@@ -789,6 +789,8 @@ export class TableRenderer {
         () => c.container.destroy({ children: true }),
       ),
     );
+    // big floating damage number: pops up from the row, arcs into the taker
+    const damage = this.showDamageNumber(row, player, bullheadTotal);
     if (bullheadTotal >= 10) {
       shake(this.root, 10);
       burst(this.fxLayer, L.rowOriginX + L.rowCard.w * 3, L.rowY(row) + L.rowCard.h / 2, COLORS.danger, {
@@ -799,7 +801,7 @@ export class TableRenderer {
     } else {
       burst(this.fxLayer, badge.x, badge.y, COLORS.magenta, { count: 8, spread: 60 });
     }
-    await Promise.all(flights);
+    await Promise.all([Promise.all(flights), damage]);
 
     // survivor slides to the row's start
     this.rowCards[row] = survivor ? [survivor] : [];
@@ -810,6 +812,69 @@ export class TableRenderer {
     }
 
     this.bumpBadge(player, this.state?.players[player].score ?? 0);
+  }
+
+  /**
+   * Big floating damage number: pops up from the row, hovers for a beat,
+   * then arcs smoothly into the taker's score badge (which counts up on
+   * arrival). Size and color scale with the damage taken.
+   */
+  private async showDamageNumber(row: number, player: number, amount: number): Promise<void> {
+    const L = this.layout;
+    const k = Math.min(1.6, Math.max(0.7, L.rowCard.h / 120));
+    let size: number;
+    let color: number;
+    if (amount >= 17) {
+      size = 66;
+      color = COLORS.danger;
+    } else if (amount >= 10) {
+      size = 52;
+      color = 0xff8a4d;
+    } else if (amount >= 5) {
+      size = 40;
+      color = COLORS.yellow;
+    } else {
+      size = 30;
+      color = COLORS.ink;
+    }
+
+    const text = new Text({
+      text: String(amount),
+      style: {
+        fontFamily: 'Arial Black, Arial, sans-serif',
+        fontSize: Math.round(size * k),
+        fontWeight: '900',
+        fill: color,
+        dropShadow: { color: 0x000000, alpha: 0.65, distance: 3, blur: 4 },
+      },
+    });
+    text.anchor.set(0.5);
+    const startX = L.rowOriginX + (ROW_SLOTS * L.rowCard.w + (ROW_SLOTS - 1) * L.rowGapX) / 2;
+    const startY = L.rowY(row) + L.rowCard.h / 2;
+    text.x = startX;
+    text.y = startY;
+    text.scale.set(0.15);
+    text.alpha = 0;
+    this.fxLayer.addChild(text);
+
+    const badge = L.badges[player];
+
+    // pop in + rise out of the row
+    await Promise.all([
+      gsap.to(text, { alpha: 1, duration: dur(0.12) }),
+      gsap.to(text.scale, { x: 1, y: 1, duration: dur(0.42), ease: 'back.out(3)' }),
+      gsap.to(text, { y: startY - 58 * k, duration: dur(0.5), ease: 'power2.out' }),
+    ]);
+    // brief hover beat so the number reads before it flies off
+    await gsap.to(text, { y: startY - 68 * k, duration: dur(0.28), ease: 'sine.inOut' });
+
+    // arc into the taker's badge, shrinking as it goes
+    await Promise.all([
+      flyArc(text, badge.x, badge.y, 0.6, { arc: 46, ease: 'power2.inOut' }),
+      gsap.to(text.scale, { x: 0.5, y: 0.5, duration: dur(0.6), ease: 'power2.in' }),
+    ]);
+    await gsap.to(text, { alpha: 0, duration: dur(0.14) });
+    text.destroy();
   }
 
   private bumpBadge(player: number, to: number): void {
