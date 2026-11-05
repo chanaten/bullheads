@@ -572,9 +572,13 @@ export class TableRenderer {
       return;
     }
     if (this.paused) return;
-    // click empty table = confirm selection (Q9-A)
-    if (this.selected !== null && this.cb.canInput() && !this.busy) {
-      void this.confirmSelection();
+    // clicking empty table cancels a pending selection; only clicking the
+    // selected card again plays it
+    if (this.selected !== null && this.cb.canInput() && !this.busy && this.guideCard === null) {
+      this.selected = null;
+      this.setRowHighlight(null);
+      play('uiClick');
+      this.layoutHand(true);
     }
   }
 
