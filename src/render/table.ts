@@ -15,6 +15,7 @@ import gsap from 'gsap';
 import type { EngineEvent, MatchState } from '../engine/rules';
 import { findTargetRow } from '../engine/rules';
 import { play } from '../audio/sfx';
+import { onLanguageChange, t } from '../i18n';
 import { createBackStack, createCard, type CardView } from './card';
 import { burst, dur, flyArc, flipCard, motionFull, settle, shake, wait } from './motion';
 import { COLORS, computeLayout, SEAT_SIDE, type Layout } from './theme';
@@ -73,6 +74,8 @@ export class TableRenderer {
   private beatWaiters: (() => void)[] = [];
   private awaitingBeat = false;
   private busy = false;
+  private promptCard: number | null = null;
+  private destroyed = false;
   paused = false;
   private pauseWaiters: (() => void)[] = [];
   private readonly onWindowResize = (): void => this.relayout();
@@ -97,6 +100,12 @@ export class TableRenderer {
     this.buildHud();
     this.relayout();
     window.addEventListener('resize', this.onWindowResize);
+    onLanguageChange(() => {
+      this.drawRoundBar();
+      if (this.promptCard !== null && this.rowPrompt.visible) {
+        this.rowPrompt.text = t('game.rowPrompt', { c: this.promptCard });
+      }
+    });
   }
 
   // ------------------------------------------------------------------ HUD
@@ -241,7 +250,7 @@ export class TableRenderer {
     const L = this.layout;
     const n = this.handOrder.length;
     if (n === 0) return;
-    const step = Math.min(L.handCard.w * 0.62, (L.screenW * 0.7) / n);
+    const step = Math.min(L.handCard.w * 0.78, (L.screenW * 0.82) / n);
     const totalW = L.handCard.w + (n - 1) * step;
     const startX = (L.screenW - totalW) / 2 + L.handCard.w / 2;
     this.handOrder.forEach((value, i) => {
@@ -275,7 +284,7 @@ export class TableRenderer {
   private drawRoundBar(): void {
     const L = this.layout;
     const round = this.state?.round ?? 0;
-    this.roundText.text = `ROUND ${Math.min(round + 1, 10)} / 10`;
+    this.roundText.text = t('game.round', { n: Math.min(round + 1, 10) });
     this.roundBar.clear();
     this.roundBar.rect(L.roundLine.x, L.roundLine.y, L.roundLine.w, 5);
     this.roundBar.fill({ color: 0x2a2660 });
@@ -318,6 +327,7 @@ export class TableRenderer {
   // ------------------------------------------------------------- hooks
 
   async deal(state: MatchState): Promise<void> {
+    if (this.destroyed) return;
     this.state = state;
     this.busy = true;
     this.selected = null;
@@ -400,11 +410,11 @@ export class TableRenderer {
     // hand: fan up from below, x preset to final slot (only y+alpha animate)
     this.handOrder = [...state.players[0].hand];
     const n = this.handOrder.length;
-    const step = Math.min(L.handCard.w * 0.62, (L.screenW * 0.7) / n);
+    const step = Math.min(L.handCard.w * 0.78, (L.screenW * 0.82) / n);
     const totalW = L.handCard.w + (n - 1) * step;
     const startX = (L.screenW - totalW) / 2 + L.handCard.w / 2;
     this.handOrder.forEach((value, i) => {
-      const view = createCard(value, L.handCard);
+      const view = createCard(value, L.handCard, { visibleWidth: step });
       this.handCards.set(value, view);
       this.cardLayer.addChild(view.container);
       view.container.x = startX + i * step;
@@ -483,6 +493,7 @@ export class TableRenderer {
   }
 
   async roundStart(round: number): Promise<void> {
+    if (this.destroyed) return;
     await this.gate();
     if (this.state) this.state.round = round;
     this.drawRoundBar();
@@ -587,6 +598,7 @@ export class TableRenderer {
   }
 
   async botCommit(player: number, card: number): Promise<void> {
+    if (this.destroyed) return;
     await this.gate();
     const L = this.layout;
     const view = createCard(card, L.handCard);
@@ -623,6 +635,7 @@ export class TableRenderer {
   }
 
   async reveal(plays: readonly { player: number; card: number }[]): Promise<void> {
+    if (this.destroyed) return;
     await this.gate();
     play('cardFlip');
     const staged = plays
@@ -643,6 +656,7 @@ export class TableRenderer {
   }
 
   async resolve(events: readonly EngineEvent[], player: number, _card: number): Promise<void> {
+    if (this.destroyed) return;
     await this.gate();
     const L = this.layout;
     const staged = this.staged[player];
@@ -761,10 +775,12 @@ export class TableRenderer {
   }
 
   async askRowChoice(card: number): Promise<number> {
+    if (this.destroyed) return 0;
     await this.gate();
     this.rowChoiceActive = true;
     this.rowHitAreas.forEach((h) => (h.eventMode = 'static'));
-    this.rowPrompt.text = `CARD ${card} IS LOWER THAN EVERY ROW — TAKE ONE!`;
+    this.promptCard = card;
+    this.rowPrompt.text = t('game.rowPrompt', { c: card });
     this.rowPrompt.visible = true;
     gsap.fromTo(this.rowPrompt, { alpha: 0 }, { alpha: 1, duration: dur(0.2) });
     play('uiClick');
@@ -775,6 +791,7 @@ export class TableRenderer {
     this.rowHitAreas.forEach((h) => (h.eventMode = 'none'));
     this.rowPrompt.visible = false;
     this.rowChoiceResolve = null;
+    this.promptCard = null;
     return row;
   }
 
@@ -786,6 +803,7 @@ export class TableRenderer {
   }
 
   async handEnd(state: MatchState): Promise<void> {
+    if (this.destroyed) return;
     await this.gate();
     play('handEnd');
     // floating "+N" over each badge for what they took this hand
@@ -836,6 +854,7 @@ export class TableRenderer {
   }
 
   destroy(): void {
+    this.destroyed = true;
     window.removeEventListener('resize', this.onWindowResize);
     gsap.globalTimeline.getChildren().forEach((t) => t.kill());
     this.root.destroy({ children: true });

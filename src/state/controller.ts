@@ -116,6 +116,12 @@ export class MatchController {
     await this.resolveRound(plays, token);
   }
 
+  /** Stop all pending flows (leaving the match). Safe to call twice. */
+  dispose(): void {
+    this.inputToken++;
+    this.phase = 'idle';
+  }
+
   private async resolveRound(
     plays: readonly { player: number; card: number }[],
     token: number,

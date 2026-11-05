@@ -1,48 +1,19 @@
 /**
- * Boot: initializes the PixiJS stage (arcade-indigo backdrop) and hands off
- * to the screen shell. Screens/table live in src/ui and src/render.
+ * Boot: PixiJS stage (indigo grid backdrop) → app screen manager.
  */
 
 import './styles.css';
-import { Application, Container, Graphics, Text } from 'pixi.js';
-import { GlowFilter } from 'pixi-filters';
+import { Application, Container, Graphics } from 'pixi.js';
 import gsap from 'gsap';
+import { startApp } from './ui/app';
 
 const BG = 0x12102a;
 const GRID = 0x2a2660;
-const CYAN = 0x4df3ff;
 
 function buildBackdrop(app: Application): { root: Container; redraw: () => void } {
   const root = new Container();
-
   const grid = new Graphics();
   root.addChild(grid);
-
-  const title = new Text({
-    text: 'BULLHEADS!',
-    style: {
-      fontFamily: 'Arial Black, sans-serif',
-      fontSize: 72,
-      fontWeight: '900',
-      fill: 0xffffff,
-      letterSpacing: 4,
-    },
-  });
-  title.anchor.set(0.5);
-  title.x = app.screen.width / 2;
-  title.y = app.screen.height / 2 - 20;
-  // Neon glow behind the white text.
-  title.filters = [new GlowFilter({ color: CYAN, outerStrength: 1.4, innerStrength: 0.2 })];
-  root.addChild(title);
-
-  const sub = new Text({
-    text: '6nimmt!',
-    style: { fontFamily: 'Arial, sans-serif', fontSize: 18, fill: 0x9a94d6, letterSpacing: 10 },
-  });
-  sub.anchor.set(0.5);
-  sub.x = title.x;
-  sub.y = title.y + 64;
-  root.addChild(sub);
 
   const redraw = (): void => {
     const { width, height } = app.screen;
@@ -58,13 +29,8 @@ function buildBackdrop(app: Application): { root: Container; redraw: () => void 
       grid.lineTo(width, y);
     }
     grid.stroke();
-    title.x = width / 2;
-    title.y = height / 2 - 20;
-    sub.x = width / 2;
-    sub.y = title.y + 64;
   };
   redraw();
-
   return { root, redraw };
 }
 
@@ -90,24 +56,12 @@ async function boot(): Promise<void> {
   app.stage.addChild(backdrop.root);
   const onResize = (): void => backdrop.redraw();
   app.renderer.on('resize', onResize);
+  window.addEventListener('beforeunload', () => {
+    app.renderer.off('resize', onResize);
+    backdrop.root.destroy({ children: true });
+  });
 
-  // TEMPORARY: the menu screen lands in the next milestone; for now boot
-  // straight into a match so the table can be verified end-to-end.
-  const { startGame } = await import('./ui/shell');
-  app.renderer.off('resize', onResize);
-  backdrop.root.destroy({ children: true });
-  const launch = (): void => {
-    const handle = startGame(app, 'normal', {
-      onRematch: () => {
-        handle.destroy();
-        launch();
-      },
-      onMenu: () => location.reload(), // replaced by the real menu later
-    });
-    void handle;
-  };
-  launch();
-
+  startApp(app);
   document.documentElement.dataset.booted = 'true';
 }
 

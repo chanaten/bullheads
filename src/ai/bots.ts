@@ -137,13 +137,21 @@ export function playoutHandCost(
   };
 
   while (!isHandOver(s) && s.players[playerId].hand.length > 0) {
-    const plays = s.players.map((p) => {
+    const plays: { player: number; card: number }[] = [];
+    for (const p of s.players) {
+      // Players who already emptied their (sampled) hand sit out; the
+      // decision-maker is protected by the loop guard above.
+      if (p.hand.length === 0) continue;
       if (p.id === playerId) {
         // The decision under evaluation is played exactly once, in round 1.
-        return { player: p.id, card: pendingFirst ?? greedyPick(p.hand, s.rows, selfDumpHigh) };
+        plays.push({
+          player: p.id,
+          card: pendingFirst ?? greedyPick(p.hand, s.rows, selfDumpHigh),
+        });
+      } else {
+        plays.push({ player: p.id, card: greedyPick(p.hand, s.rows, true) });
       }
-      return { player: p.id, card: greedyPick(p.hand, s.rows, true) };
-    });
+    }
     pendingFirst = null;
     for (const { player, card } of resolveOrder(plays)) place(player, card);
   }

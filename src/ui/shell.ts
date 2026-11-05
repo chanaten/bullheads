@@ -20,6 +20,7 @@ export interface GameOptions {
 
 export interface GameHandle {
   controller: MatchController;
+  table: TableRenderer;
   destroy: () => void;
 }
 
@@ -59,6 +60,14 @@ export function startGame(
 
   return {
     controller,
-    destroy: () => table.destroy(),
+    table,
+    destroy: () => {
+      controller.dispose();
+      table.destroy();
+      const w = window as unknown as Record<string, unknown>;
+      if (w.__bh && (w.__bh as { table?: unknown }).table === table) {
+        delete w.__bh;
+      }
+    },
   };
 }

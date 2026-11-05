@@ -180,6 +180,305 @@ body {
   padding: 0;
 }
 
+/* ---- title screen ---- */
+
+.menu-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.marquee {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 58px 26px;
+  border: 2px solid rgba(255, 216, 77, 0.5);
+  border-radius: 22px;
+  background: rgba(14, 12, 38, 0.85);
+  box-shadow:
+    0 0 26px rgba(255, 216, 77, 0.18),
+    inset 0 0 34px rgba(77, 243, 255, 0.06);
+}
+
+.marquee .neon-title {
+  font-size: clamp(40px, 7vw, 76px);
+  animation: neon-flicker 4.5s infinite;
+}
+
+.bulbs {
+  position: absolute;
+  inset: 7px;
+  pointer-events: none;
+}
+
+.bulbs i {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--neon-yellow);
+  box-shadow: 0 0 7px var(--neon-yellow);
+  animation: bulb 1.4s infinite alternate;
+}
+
+/* place bulbs evenly around the marquee border via nth math in JS-free way:
+   24 bulbs: top/bottom rows + sides using :nth-child */
+.bulbs i:nth-child(1) { top: 0; left: 4%; }
+.bulbs i:nth-child(2) { top: 0; left: 12%; }
+.bulbs i:nth-child(3) { top: 0; left: 20%; }
+.bulbs i:nth-child(4) { top: 0; left: 28%; }
+.bulbs i:nth-child(5) { top: 0; left: 36%; }
+.bulbs i:nth-child(6) { top: 0; left: 44%; }
+.bulbs i:nth-child(7) { top: 0; left: 52%; }
+.bulbs i:nth-child(8) { top: 0; left: 60%; }
+.bulbs i:nth-child(9) { top: 0; left: 68%; }
+.bulbs i:nth-child(10) { top: 0; left: 76%; }
+.bulbs i:nth-child(11) { top: 0; left: 84%; }
+.bulbs i:nth-child(12) { top: 0; left: 92%; }
+.bulbs i:nth-child(13) { bottom: 0; left: 4%; }
+.bulbs i:nth-child(14) { bottom: 0; left: 12%; }
+.bulbs i:nth-child(15) { bottom: 0; left: 20%; }
+.bulbs i:nth-child(16) { bottom: 0; left: 28%; }
+.bulbs i:nth-child(17) { bottom: 0; left: 36%; }
+.bulbs i:nth-child(18) { bottom: 0; left: 44%; }
+.bulbs i:nth-child(19) { bottom: 0; left: 52%; }
+.bulbs i:nth-child(20) { bottom: 0; left: 60%; }
+.bulbs i:nth-child(21) { bottom: 0; left: 68%; }
+.bulbs i:nth-child(22) { bottom: 0; left: 76%; }
+.bulbs i:nth-child(23) { bottom: 0; left: 84%; }
+.bulbs i:nth-child(24) { bottom: 0; left: 92%; }
+
+.bulbs i:nth-child(odd) { animation-delay: 0.7s; }
+
+@keyframes bulb {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes neon-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.55;
+  }
+  94% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.7;
+  }
+  98% {
+    opacity: 1;
+  }
+}
+
+/* ---- difficulty select ---- */
+
+.panel-title.big {
+  font-size: 26px;
+}
+
+.difficulty-row {
+  display: flex;
+  gap: 22px;
+}
+
+.tier-card {
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  width: 230px;
+  padding: 22px 24px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  color: var(--ink);
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.tier-card:hover,
+.tier-card:focus-visible {
+  transform: translateY(-4px);
+  outline: none;
+}
+
+.tier-normal:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 18px rgba(77, 243, 255, 0.4);
+}
+
+.tier-hard:hover {
+  border-color: var(--neon-yellow);
+  box-shadow: 0 0 18px rgba(255, 216, 77, 0.4);
+}
+
+.tier-asian:hover {
+  border-color: var(--neon-magenta);
+  box-shadow: 0 0 18px rgba(255, 77, 216, 0.45);
+}
+
+.tier-name {
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.tier-normal .tier-name {
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px rgba(77, 243, 255, 0.55);
+}
+
+.tier-hard .tier-name {
+  color: var(--neon-yellow);
+  text-shadow: 0 0 10px rgba(255, 216, 77, 0.55);
+}
+
+.tier-asian .tier-name {
+  color: var(--neon-magenta);
+  text-shadow: 0 0 10px rgba(255, 77, 216, 0.6);
+}
+
+.tier-desc {
+  color: var(--ink-dim);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* ---- settings / rules / pause ---- */
+
+.settings-panel {
+  min-width: 380px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  font-size: 15px;
+}
+
+.setting-row input[type='range'] {
+  width: 180px;
+  accent-color: var(--neon-cyan);
+}
+
+.seg {
+  display: flex;
+  gap: 6px;
+}
+
+.seg-btn {
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.seg-btn.on {
+  color: #06232a;
+  background: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px rgba(77, 243, 255, 0.5);
+}
+
+.rules-panel {
+  max-width: 640px;
+  text-align: left;
+  gap: 12px;
+}
+
+.rule-line {
+  color: var(--ink);
+  line-height: 1.55;
+  font-size: 15px;
+  padding-left: 16px;
+  border-left: 2px solid rgba(77, 243, 255, 0.4);
+}
+
+.arcade-btn.ghost {
+  background: transparent;
+}
+
+.arcade-btn.danger {
+  color: #ffe9ef;
+  border-color: rgba(255, 77, 109, 0.6);
+}
+
+.arcade-btn.danger:hover {
+  border-color: var(--neon-magenta);
+  box-shadow: 0 0 10px rgba(255, 77, 216, 0.45);
+}
+
+/* ---- in-game corner HUD ---- */
+
+.hud-btn {
+  position: absolute;
+  top: 12px;
+  z-index: 20;
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: rgba(14, 12, 38, 0.85);
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  min-width: 46px;
+  height: 40px;
+  padding: 0 12px;
+  transition:
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.hud-btn:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px rgba(77, 243, 255, 0.45);
+}
+
+.speed-btn {
+  left: 12px;
+}
+
+.speed-btn.on {
+  color: #06232a;
+  background: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 12px rgba(77, 243, 255, 0.6);
+}
+
+.pause-btn {
+  right: 12px;
+}
+
 /* ---- overlays (scoreboard / match end) ---- */
 
 .overlay {
