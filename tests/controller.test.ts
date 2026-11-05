@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MatchController, type UIHooks } from '../src/state/controller';
 import { chooseCard } from '../src/ai/bots';
-import { type EngineEvent, createMatch, isMatchOver } from './helpers';
+import { type EngineEvent, createMatch, isMatchOver, totalBullheads } from './helpers';
 import { clearMatch, loadMatch } from '../src/state/persistence';
 
 function seeded(seed: number): () => number {
@@ -129,7 +129,8 @@ describe('MatchController', () => {
     await controller.humanPlay(5);
 
     expect(log.asks).toBe(1);
-    expect(state.rows[2]).toEqual([70, 5]); // chose row 2, card appended
+    expect(state.rows[2]).toEqual([5]); // chosen row gathered, played card stays
+    expect(state.players[0].handScore).toBe(totalBullheads([70])); // human scored
     expect(controller.phase).toBe('choosing');
     expect(state.round).toBe(1);
   }, 30_000);

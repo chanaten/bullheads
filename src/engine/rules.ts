@@ -85,6 +85,11 @@ export interface RowApplication {
 /**
  * Apply `card` to `rows`, mutating them. `chosenRow` is only read when the
  * card is lower than every row's end. Shared by the match engine and the AI.
+ *
+ * Two ways a play takes cards:
+ *  - the card would be the 6th on its target row → gather the 5, card stays;
+ *  - the card is lower than every row end (forced choice) → gather the WHOLE
+ *    chosen row (any length), card stays as its new first card.
  */
 export function applyToRows(
   rows: number[][],
@@ -104,10 +109,11 @@ export function applyToRows(
     row = target;
   }
   const rowCards = rows[row];
-  if (rowCards.length >= ROW_MAX) {
+  if (forced || rowCards.length >= ROW_MAX) {
+    // gather the row; the played card stays behind as its new first card
     const took = rowCards.slice();
     rows[row] = [card];
-    return { row, took, overflow: true, forced };
+    return { row, took, overflow: !forced, forced };
   }
   rowCards.push(card);
   return { row, took: null, overflow: false, forced };

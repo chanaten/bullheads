@@ -117,13 +117,17 @@ describe('placeCard', () => {
     expect(s.players[2].handScore).toBe(s.players[2].score - before);
   });
 
-  it('low card: must choose a row, and refusing throws', () => {
+  it('low card: must choose a row — the whole row is taken, card stays', () => {
     const s = setup();
     s.rows = [[10], [30], [60], [90]];
     expect(() => placeCard(s, 3, 5)).toThrow();
+    const before = s.players[3].score;
     const events = placeCard(s, 3, 5, 2);
     expect(events.some((e) => e.type === 'rowChosen')).toBe(true);
-    expect(s.rows[2]).toEqual([60, 5]); // 5 appended if row not full
+    const take = events.find((e) => e.type === 'rowTaken');
+    expect(take).toBeDefined();
+    expect(s.rows[2]).toEqual([5]); // chosen row gathered; played card stays
+    expect(s.players[3].score - before).toBe(totalBullheads([60])); // scored
   });
 
   it('low card onto a full row takes it, played card starts the row', () => {

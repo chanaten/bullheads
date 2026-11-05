@@ -106,7 +106,7 @@ function avgHeroScore(difficulty: Difficulty, seeds: number[]): number {
 
 describe('simulation: difficulty ordering', () => {
   it('asian outperforms hard, which outperforms normal (vs fixed reference)', () => {
-    const seeds = Array.from({ length: 40 }, (_, i) => 500 + i);
+    const seeds = Array.from({ length: 120 }, (_, i) => 500 + i);
     const avg = {
       normal: avgHeroScore('normal', seeds),
       hard: avgHeroScore('hard', seeds),
