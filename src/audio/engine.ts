@@ -10,7 +10,7 @@
  * policy).
  */
 
-import loopUrl from './hitslab_lofi.mp3';
+import loopUrl from './upbeat.mp3';
 import { getSettings, onSettingsChange } from '../state/settingsStore';
 import type { SfxName } from './names';
 
