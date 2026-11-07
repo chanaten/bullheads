@@ -200,36 +200,43 @@ export function startTutorial(app: Application, onFinish: () => void): void {
   }
 
   async function run(): Promise<void> {
-    await table.deal(state);
+    try {
+      await table.deal(state);
 
-    for (const step of STEPS) {
-      if (skipped) break;
-      const res = await showBanner(step.title, step.body);
-      if (res === 'skip') {
-        skipped = true;
-        break;
+      for (const step of STEPS) {
+        if (skipped) break;
+        const res = await showBanner(step.title, step.body);
+        if (res === 'skip') {
+          skipped = true;
+          break;
+        }
+        script = step;
+        awaitingInput = true;
+        table.guideSelect(step.humanCard);
+
+        const ok = await waitPlayed();
+        table.guideSelect(null);
+        if (!ok) break;
+
+        const res2 = await showBanner(step.afterTitle, step.afterBody, { final: step.final });
+        if (res2 === 'skip') {
+          skipped = true;
+          break;
+        }
       }
-      script = step;
-      awaitingInput = true;
-      table.guideSelect(step.humanCard);
 
-      const ok = await waitPlayed();
-      table.guideSelect(null);
-      if (!ok) break;
-
-      const res2 = await showBanner(step.afterTitle, step.afterBody, { final: step.final });
-      if (res2 === 'skip') {
-        skipped = true;
-        break;
-      }
+      // completed (not left early) marks the tutorial as seen
+      if (!skipped) updateSettings({ tutorialSeen: true });
+    } catch (err) {
+      throw err;
+    } finally {
+      // whatever happens — leave, Escape mid-round, or an unexpected error —
+      // the table is torn down and the player always lands on the menu
+      table.destroy();
+      const w = window as unknown as Record<string, unknown>;
+      if (w.__bh && (w.__bh as { table?: unknown }).table === table) delete w.__bh;
+      onFinish();
     }
-
-    // completed (not left early) marks the tutorial as seen
-    if (!skipped) updateSettings({ tutorialSeen: true });
-    table.destroy();
-    const w = window as unknown as Record<string, unknown>;
-    if (w.__bh && (w.__bh as { table?: unknown }).table === table) delete w.__bh;
-    onFinish();
   }
 
   void run();
