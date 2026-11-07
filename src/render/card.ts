@@ -128,7 +128,7 @@ export function createCard(value: number, m: CardMetrics): CardView {
 
   // bottom-left damage chip: value + targeting reticle
   const chip = new Container();
-  const chipFont = Math.max(8, Math.floor(m.h * 0.15));
+  const chipFont = Math.max(10, Math.floor(m.h * 0.1875)); // +25%
   const dmgText = new Text({
     text: String(bh),
     style: {
@@ -141,7 +141,7 @@ export function createCard(value: number, m: CardMetrics): CardView {
   dmgText.anchor.set(0, 0.5);
   dmgText.x = 0;
   chip.addChild(dmgText);
-  const reticleSize = Math.max(9, m.h * 0.13);
+  const reticleSize = Math.max(11, m.h * 0.1625); // +25%
   const ret = new Graphics();
   drawReticle(
     ret,
