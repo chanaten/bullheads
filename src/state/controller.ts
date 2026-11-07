@@ -67,14 +67,13 @@ export class MatchController {
     this.rng = rng;
   }
 
-  /** Build a brand-new match. */
+  /** Build a brand-new match (roster + mixed bot tiers sampled inside). */
   static create(
-    difficulty: MatchState['difficulty'],
     playerNames: readonly string[],
     ui: UIHooks,
     rng: () => number = Math.random,
   ): MatchController {
-    return new MatchController(createMatch(difficulty, playerNames, rng), ui, rng);
+    return new MatchController(createMatch(playerNames, rng), ui, rng);
   }
 
   /** Render an existing (e.g. resumed) match and enter the choosing phase. */

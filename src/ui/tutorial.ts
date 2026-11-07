@@ -88,7 +88,7 @@ const STEPS: TutorialStep[] = [
 
 /** Crafted demo state: rows and hands that guarantee the four lessons. */
 function craftedState(): MatchState {
-  const state = createMatch('normal', ['YOU', 'Nyx', 'Flux', 'Rook', 'Kira'], () => 0.42);
+  const state = createMatch(['YOU', 'Nyx', 'Flux', 'Rook', 'Kira'], () => 0.42);
   state.rows = [[11], [50], [70], [90]];
   state.players[0].hand = [4, 13, 15, 45, 65, 80, 85, 95, 100, 104];
   state.players[1].hand = [12, 14, 16, 17];

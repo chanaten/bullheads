@@ -13,6 +13,7 @@
 
 import { fullDeck, shuffle } from '../engine/cards';
 import {
+  type BotTier,
   type Difficulty,
   type MatchState,
   applyToRows,
@@ -21,16 +22,16 @@ import {
   findTargetRow,
   isHandOver,
   resolveOrder,
-  totalBullheads,
+  totalDamage,
 } from '../engine/rules';
 
-/** The row a forced player should take: fewest bullheads, then fewest cards. */
+/** The row a forced player should take: fewest damage, then fewest cards. */
 export function chooseRow(rows: readonly number[][]): number {
   let best = 0;
   let bestPts = Infinity;
   let bestLen = Infinity;
   for (let i = 0; i < rows.length; i++) {
-    const pts = totalBullheads(rows[i]);
+    const pts = totalDamage(rows[i]);
     const len = rows[i].length;
     if (pts < bestPts || (pts === bestPts && len < bestLen)) {
       best = i;
@@ -45,11 +46,11 @@ export function chooseRow(rows: readonly number[][]): number {
 function immediateCost(rows: readonly number[][], card: number): number {
   const copy = rows.map((r) => r.slice());
   const res = applyToRows(copy, card, chooseRow(copy));
-  return res.took ? totalBullheads(res.took) : 0;
+  return res.took ? totalDamage(res.took) : 0;
 }
 
 /**
- * Greedy pick: minimize the bullheads this play costs right now.
+ * Greedy pick: minimize the damage this play costs right now.
  * Tie-break `dumpHigh` (strong): play the LARGEST card — sheds dangerous high
  * cards while rows are still low. Weak tiers keep the smallest instead.
  */
@@ -110,7 +111,7 @@ export function sampleOpponentHands(
 /**
  * Play out the rest of the hand: `firstCard` is committed for `playerId` in
  * round 1; everyone else (and playerId thereafter) plays the strong greedy
- * policy from `oppHands`. Returns the bullheads playerId pays from here.
+ * policy from `oppHands`. Returns the damage playerId pays from here.
  */
 export function playoutHandCost(
   state: MatchState,
@@ -132,7 +133,7 @@ export function playoutHandCost(
     const row = findTargetRow(card, s.rows);
     const res = applyToRows(s.rows, card, row ?? chooseRow(s.rows));
     if (res.took && player === playerId) {
-      s.players[playerId].score += totalBullheads(res.took);
+      s.players[playerId].score += totalDamage(res.took);
     }
   };
 
@@ -164,25 +165,27 @@ export interface ChooseOptions {
   rng?: () => number;
   /** Explicit policy override (experiments/tests). */
   policy?: 'greedy-dump' | 'greedy-keep';
-  /** Play as this tier regardless of the match difficulty (tests). */
+  /** Play as this tier regardless of the seat's tier (tests). */
   difficultyOverride?: Difficulty;
 }
 
-/** Pick a card for `playerId` according to the match's difficulty. */
+/** Pick a card for `playerId` according to that seat's bot tier. */
 export function chooseCard(state: MatchState, playerId: number, opts: ChooseOptions = {}): number {
   const hand = state.players[playerId].hand;
   if (hand.length === 0) throw new Error('player has no cards');
   if (hand.length === 1) return hand[0];
   const rng = opts.rng ?? Math.random;
-  const difficulty = opts.difficultyOverride ?? state.difficulty;
+  const tier: BotTier = opts.difficultyOverride ?? state.players[playerId].tier ?? 'normal';
 
   if (opts.policy === 'greedy-dump') return greedyPick(hand, state.rows, true);
   if (opts.policy === 'greedy-keep') return greedyPick(hand, state.rows, false);
-  if (difficulty === 'normal') return greedyPick(hand, state.rows, false);
+  if (tier === 'normal') return greedyPick(hand, state.rows, false);
+  // wildcard: uniform pick from the hand (row defense still smart)
+  if (tier === 'random') return hand[Math.floor(rng() * hand.length)];
 
   // hard & asian: Monte-Carlo with common random numbers — candidate
   // differences are judged against identical rollouts (signal, not noise).
-  const samples = opts.samples ?? (difficulty === 'hard' ? 12 : 24);
+  const samples = opts.samples ?? (tier === 'hard' ? 12 : 24);
   const contexts = Array.from({ length: samples }, () =>
     sampleOpponentHands(state, playerId, rng),
   );

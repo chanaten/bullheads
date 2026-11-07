@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bullheads, fullDeck } from '../src/engine/cards';
+import { damage, fullDeck } from '../src/engine/cards';
 import {
   HAND_SIZE,
   MATCH_TARGET,
@@ -15,7 +15,7 @@ import {
   placeCard,
   resolveOrder,
   startNextHand,
-  totalBullheads,
+  totalDamage,
   winners,
 } from '../src/engine/rules';
 
@@ -33,20 +33,20 @@ function seeded(seed: number): () => number {
 
 const NAMES = ['You', 'Nyx', 'Flux', 'Rook', 'Kira'];
 
-describe('bullheads distribution', () => {
+describe('damage distribution', () => {
   it('follows official values', () => {
-    expect(bullheads(55)).toBe(7);
-    for (const n of [11, 22, 33, 44, 66, 77, 88, 99]) expect(bullheads(n)).toBe(5);
-    for (const n of [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]) expect(bullheads(n)).toBe(3);
-    for (const n of [5, 15, 25, 35, 45, 65, 75, 85, 95]) expect(bullheads(n)).toBe(2);
-    expect(bullheads(1)).toBe(1);
-    expect(bullheads(104)).toBe(1);
-    expect(bullheads(7)).toBe(1);
+    expect(damage(55)).toBe(7);
+    for (const n of [11, 22, 33, 44, 66, 77, 88, 99]) expect(damage(n)).toBe(5);
+    for (const n of [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]) expect(damage(n)).toBe(3);
+    for (const n of [5, 15, 25, 35, 45, 65, 75, 85, 95]) expect(damage(n)).toBe(2);
+    expect(damage(1)).toBe(1);
+    expect(damage(104)).toBe(1);
+    expect(damage(7)).toBe(1);
   });
 
   it('sums to 171 over the whole deck', () => {
     // 1×7 + 8×5 + 10×3 + 9×2 + 76×1 = 7+40+30+18+76 = 171
-    expect(totalBullheads(fullDeck())).toBe(171);
+    expect(totalDamage(fullDeck())).toBe(171);
   });
 
   it('has 104 unique cards', () => {
@@ -58,7 +58,7 @@ describe('bullheads distribution', () => {
 
 describe('dealing', () => {
   it('deals 10 unique cards to each of 5 players, 4 start rows, no duplicates anywhere', () => {
-    const state = createMatch('normal', NAMES, seeded(42));
+    const state = createMatch(NAMES, seeded(42));
     const all = [...state.rows.flat(), ...state.players.flatMap((p) => p.hand)];
     expect(state.rows).toHaveLength(ROW_COUNT);
     for (const row of state.rows) expect(row).toHaveLength(1);
@@ -67,7 +67,7 @@ describe('dealing', () => {
   });
 
   it('sorts hands ascending', () => {
-    const state = createMatch('normal', NAMES, seeded(7));
+    const state = createMatch(NAMES, seeded(7));
     for (const p of state.players) {
       expect([...p.hand].sort((a, b) => a - b)).toEqual(p.hand);
     }
@@ -94,7 +94,7 @@ describe('findTargetRow', () => {
 
 describe('placeCard', () => {
   function setup() {
-    return createMatch('normal', NAMES, seeded(99));
+    return createMatch(NAMES, seeded(99));
   }
 
   it('appends to the target row when under the limit', () => {
@@ -113,7 +113,7 @@ describe('placeCard', () => {
     const take = events.find((e) => e.type === 'rowTaken');
     expect(take).toBeDefined();
     expect(s.rows[0]).toEqual([20]);
-    expect(s.players[2].score - before).toBe(totalBullheads([10, 12, 14, 16, 18]));
+    expect(s.players[2].score - before).toBe(totalDamage([10, 12, 14, 16, 18]));
     expect(s.players[2].handScore).toBe(s.players[2].score - before);
   });
 
@@ -127,7 +127,7 @@ describe('placeCard', () => {
     const take = events.find((e) => e.type === 'rowTaken');
     expect(take).toBeDefined();
     expect(s.rows[2]).toEqual([5]); // chosen row gathered; played card stays
-    expect(s.players[3].score - before).toBe(totalBullheads([60])); // scored
+    expect(s.players[3].score - before).toBe(totalDamage([60])); // scored
   });
 
   it('low card onto a full row takes it, played card starts the row', () => {
@@ -135,7 +135,7 @@ describe('placeCard', () => {
     s.rows = [[10], [30, 32, 34, 36, 38], [60], [90]];
     placeCard(s, 3, 5, 1);
     expect(s.rows[1]).toEqual([5]);
-    expect(s.players[3].score).toBe(totalBullheads([30, 32, 34, 36, 38]));
+    expect(s.players[3].score).toBe(totalDamage([30, 32, 34, 36, 38]));
   });
 
   it('rejects a card the player does not hold', () => {
@@ -159,7 +159,7 @@ describe('resolveOrder', () => {
 
 describe('match flow', () => {
   it('plays a full hand without duplicate cards ever appearing', () => {
-    const s = createMatch('normal', NAMES, seeded(1234));
+    const s = createMatch(NAMES, seeded(1234));
     let takenToPiles = 0;
     for (let round = 0; round < HAND_SIZE; round++) {
       const plays = s.players.map((p) => {
@@ -169,11 +169,11 @@ describe('match flow', () => {
       });
       for (const { player, card } of resolveOrder(plays)) {
         const target = findTargetRow(card, s.rows);
-        // must-choose: take the row with the fewest bullheads (legal in all cases)
+        // must-choose: take the row with the fewest damage (legal in all cases)
         const chosen =
           target ??
           s.rows
-            .map((r, i) => ({ i, pts: totalBullheads(r) }))
+            .map((r, i) => ({ i, pts: totalDamage(r) }))
             .sort((a, b) => a.pts - b.pts)[0].i;
         const events = placeCard(s, player, card, chosen);
         const take = events.find((e) => e.type === 'rowTaken');
@@ -191,7 +191,7 @@ describe('match flow', () => {
   });
 
   it('end hand: score persists into next hand, handScore resets', () => {
-    const s = createMatch('normal', NAMES, seeded(5));
+    const s = createMatch(NAMES, seeded(5));
     s.players[1].score = 40;
     s.players[1].handScore = 40;
     startNextHand(s, seeded(6));
@@ -202,16 +202,16 @@ describe('match flow', () => {
     for (const p of s.players) expect(p.hand).toHaveLength(HAND_SIZE);
   });
 
-  it('match over requires ≥66 after a completed hand', () => {
-    const s = createMatch('normal', NAMES, seeded(5));
-    s.players[4].score = 70;
+  it('match over requires ≥100 damage after a completed hand', () => {
+    const s = createMatch(NAMES, seeded(5));
+    s.players[4].score = 105;
     expect(isMatchOver(s)).toBe(false); // hand not finished
     for (const p of s.players) p.hand = [];
     expect(isMatchOver(s)).toBe(true);
   });
 
   it('fewest points wins; exact bottom tie = shared victory', () => {
-    const s = createMatch('normal', NAMES, seeded(5));
+    const s = createMatch(NAMES, seeded(5));
     for (const p of s.players) p.hand = [];
     s.players[0].score = 12;
     s.players[1].score = 30;
@@ -222,7 +222,7 @@ describe('match flow', () => {
   });
 
   it('cloneMatch is deep (simulation safety)', () => {
-    const s = createMatch('normal', NAMES, seeded(9));
+    const s = createMatch(NAMES, seeded(9));
     const c = cloneMatch(s);
     const card = s.players[0].hand[0];
     consumeCard(s, 0, card);
@@ -236,7 +236,7 @@ describe('match flow', () => {
 
 describe('match target', () => {
   it('exposes 66 as the match target', () => {
-    expect(MATCH_TARGET).toBe(66);
+    expect(MATCH_TARGET).toBe(100);
     expect(ROW_MAX).toBe(5);
     expect(ROW_COUNT).toBe(4);
   });

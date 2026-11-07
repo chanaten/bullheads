@@ -20,9 +20,13 @@ describe('chooseCard legality', () => {
   it('always returns a card the player actually holds, for every difficulty', () => {
     for (const difficulty of DIFFS) {
       for (let seed = 1; seed <= 25; seed++) {
-        const state = createMatch(difficulty, NAMES, seeded(seed));
+        const state = createMatch(NAMES, seeded(seed), [difficulty, difficulty, difficulty, difficulty]);
         for (const p of state.players) {
-          const card = chooseCard(state, p.id, { rng: seeded(seed * 100 + p.id), samples: 4 });
+          const card = chooseCard(state, p.id, {
+            rng: seeded(seed * 100 + p.id),
+            samples: 4,
+            difficultyOverride: difficulty,
+          });
           expect(p.hand).toContain(card);
         }
       }
@@ -30,9 +34,9 @@ describe('chooseCard legality', () => {
   });
 
   it('is deterministic with a seeded rng', () => {
-    const state = createMatch('asian', NAMES, seeded(3));
-    const a = chooseCard(state, 0, { rng: seeded(77), samples: 8 });
-    const b = chooseCard(state, 0, { rng: seeded(77), samples: 8 });
+    const state = createMatch(NAMES, seeded(3), ['asian', 'asian', 'asian', 'asian']);
+    const a = chooseCard(state, 0, { rng: seeded(77), samples: 8, difficultyOverride: 'asian' });
+    const b = chooseCard(state, 0, { rng: seeded(77), samples: 8, difficultyOverride: 'asian' });
     expect(a).toBe(b);
   });
 });
@@ -40,7 +44,7 @@ describe('chooseCard legality', () => {
 describe('no cheating (asian tier)', () => {
   it('chooses the same card regardless of opponents hidden hands', () => {
     for (let seed = 1; seed <= 10; seed++) {
-      const base = createMatch('asian', NAMES, seeded(seed));
+      const base = createMatch(NAMES, seeded(seed), ['asian', 'asian', 'asian', 'asian']);
       const variant = cloneMatch(base);
       // Shuffle opponents' hidden hands — public info is unchanged.
       const h1 = variant.players[1].hand;
@@ -50,8 +54,8 @@ describe('no cheating (asian tier)', () => {
       variant.players[2].hand = variant.players[4].hand.slice();
       variant.players[4].hand = h2.slice();
 
-      const a = chooseCard(base, 0, { rng: seeded(999), samples: 8 });
-      const b = chooseCard(variant, 0, { rng: seeded(999), samples: 8 });
+      const a = chooseCard(base, 0, { rng: seeded(999), samples: 8, difficultyOverride: 'asian' });
+      const b = chooseCard(variant, 0, { rng: seeded(999), samples: 8, difficultyOverride: 'asian' });
       expect(b).toBe(a);
     }
   });
@@ -60,56 +64,56 @@ describe('no cheating (asian tier)', () => {
     // Structurally guaranteed (they only take rows/hand args); assert outputs
     // also match under hand shuffling of opponents, with a seeded rng so the
     // hard tier's rollouts are reproducible.
-    const base = createMatch('hard', NAMES, seeded(4));
+    const base = createMatch(NAMES, seeded(4), ['hard', 'hard', 'hard', 'hard']);
     const variant = cloneMatch(base);
     const h = variant.players[1].hand;
     variant.players[1].hand = variant.players[2].hand;
     variant.players[2].hand = h;
-    expect(chooseCard(variant, 0, { rng: seeded(9) })).toBe(
-      chooseCard(base, 0, { rng: seeded(9) }),
+    expect(chooseCard(variant, 0, { rng: seeded(9), difficultyOverride: 'hard' })).toBe(
+      chooseCard(base, 0, { rng: seeded(9), difficultyOverride: 'hard' }),
     );
   });
 });
 
 describe('difficulty behavior', () => {
   it('normal hoards the big card when both plays are free (no foresight)', () => {
-    const s = createMatch('normal', NAMES, seeded(1));
+    const s = createMatch(NAMES, seeded(1), ['normal', 'normal', 'normal', 'normal']);
     s.rows = [
       [15, 17, 19, 21], // len 4 — filling it creates an instant-take row
       [10],
       [40],
-      [80, 84, 88, 92], // len 4, heavy (88 = 5 bullheads)
+      [80, 84, 88, 92], // len 4, heavy (88 = 5 damage)
     ];
     s.players[0].hand = [50, 93];
     // Both plays cost 0 right now; the naive tie-break keeps the smallest.
-    expect(chooseCard(s, 0)).toBe(50);
+    expect(chooseCard(s, 0, { difficultyOverride: 'normal' })).toBe(50);
   });
 
   it('hard never walks into a sure take when a safe card exists', () => {
-    // Property across seeds: landing on the full row costs 7 bullheads now;
+    // Property across seeds: landing on the full row costs 7 damage now;
     // any Monte-Carlo rollout sees that immediately.
     for (let seed = 1; seed <= 10; seed++) {
-      const s = createMatch('hard', NAMES, seeded(seed));
+      const s = createMatch(NAMES, seeded(seed), ['hard', 'hard', 'hard', 'hard']);
       s.rows = [[10, 12, 14, 16, 18], [50], [70], [90]]; // row 0 is full
       s.players[0].hand = [19, 55, 99];
-      const card = chooseCard(s, 0, { rng: seeded(seed * 31) });
+      const card = chooseCard(s, 0, { rng: seeded(seed * 31), difficultyOverride: 'hard' });
       expect(card).not.toBe(19);
     }
   });
 
   it('asian never walks into a sure take when a safe card exists', () => {
     for (let seed = 1; seed <= 6; seed++) {
-      const s = createMatch('asian', NAMES, seeded(seed));
+      const s = createMatch(NAMES, seeded(seed), ['asian', 'asian', 'asian', 'asian']);
       s.rows = [[10, 12, 14, 16, 18], [50], [70], [90]];
       s.players[0].hand = [19, 55, 99];
-      const card = chooseCard(s, 0, { rng: seeded(seed * 17), samples: 8 });
+      const card = chooseCard(s, 0, { rng: seeded(seed * 17), samples: 8, difficultyOverride: 'asian' });
       expect(card).not.toBe(19);
     }
   });
 });
 
 describe('chooseRow', () => {
-  it('takes the row with fewest bullheads', () => {
+  it('takes the row with fewest damage', () => {
     const rows = [
       [55, 11, 10], // 7+5+3 = 15
       [1, 2], // 1+1 = 2  ← fewest

@@ -1,10 +1,10 @@
-/** Core card definitions for 6nimmt! (cards numbered 1–104). */
+/** Core card definitions for the game (cards numbered 1–104). */
 
 export const MIN_CARD = 1;
 export const MAX_CARD = 104;
 
-/** Bullhead (penalty point) values per official rules. */
-export function bullheads(n: number): number {
+/** Damage (penalty point) values per official rules. */
+export function damage(n: number): number {
   if (n < MIN_CARD || n > MAX_CARD) {
     throw new RangeError(`card out of range: ${n}`);
   }

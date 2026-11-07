@@ -14,9 +14,21 @@ function clearOverlays(): void {
   for (const node of uiRoot().querySelectorAll('.overlay')) node.remove();
 }
 
-function standings(state: MatchState): { id: number; name: string; score: number; hand: number }[] {
+function standings(state: MatchState): {
+  id: number;
+  name: string;
+  score: number;
+  hp: number;
+  hand: number;
+}[] {
   return state.players
-    .map((p) => ({ id: p.id, name: p.name, score: p.score, hand: p.handScore }))
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      score: p.score,
+      hp: Math.max(0, 100 - p.score),
+      hand: p.handScore,
+    }))
     .sort((a, b) => a.score - b.score);
 }
 
@@ -31,15 +43,18 @@ function keyOnce(handler: () => void): () => void {
   return () => window.removeEventListener('keydown', onKey);
 }
 
-function standingRow(row: { id: number; name: string; score: number; hand: number }, showDelta: boolean): HTMLElement {
+function standingRow(
+  row: { id: number; name: string; score: number; hp: number; hand: number },
+  showDelta: boolean,
+): HTMLElement {
   const div = el(
     'div',
     `standing${row.id === 0 ? ' you' : ''}${row.score >= MATCH_TARGET ? ' over' : ''}`,
   );
   div.innerHTML = `
     <span class="who">${row.name}</span>
-    <span class="delta">${showDelta ? `+${row.hand}` : ''}</span>
-    <span class="score">${row.score}</span>
+    <span class="delta">${showDelta ? `−${row.hand}` : ''}</span>
+    <span class="score">${row.hp}</span>
   `;
   return div;
 }
@@ -113,7 +128,7 @@ export function showMatchEnd(
   for (const row of standings(state)) {
     const crown = winners.includes(row.id) ? '👑 ' : '';
     const div = el('div', `standing${row.id === 0 ? ' you' : ''}`);
-    div.innerHTML = `<span class="who">${crown}${row.name}</span><span class="score">${row.score}</span>`;
+    div.innerHTML = `<span class="who">${crown}${row.name}</span><span class="score">${row.hp}</span>`;
     list.appendChild(div);
   }
   panel.appendChild(list);

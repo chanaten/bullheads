@@ -1,15 +1,14 @@
 /**
- * Screen manager: menu ↔ difficulty ↔ match, with settings, pause, and
- * resume wired together. This is the app's composition root.
+ * Screen manager: menu ↔ match, with settings, pause, and resume wired
+ * together. This is the app's composition root (PLAY goes straight into
+ * a deal — the mixed bot composition is fixed).
  */
 
 import type { Application } from 'pixi.js';
-import type { Difficulty } from '../engine/rules';
 import { initAudio } from '../audio/engine';
 import { audio } from '../audio/engine';
 import { clearScreens } from './dom';
 import { showMenu } from './menu';
-import { showDifficulty } from './difficulty';
 import { openSettings } from './settings';
 import { showRules } from './rules';
 import { openPause } from './pause';
@@ -54,14 +53,14 @@ export function startApp(app: Application): void {
     clearScreens();
   };
 
-  const launchMatch = (difficulty: Difficulty, resume: boolean): void => {
+  const launchMatch = (resume: boolean): void => {
     teardownGame();
 
     let closePause: (() => void) | null = null;
 
-    game = startGame(app, difficulty, {
+    game = startGame(app, {
       resume,
-      onRematch: () => launchMatch(difficulty, false),
+      onRematch: () => launchMatch(false),
       onMenu: () => {
         teardownGame();
         showMainMenu();
@@ -97,11 +96,11 @@ export function startApp(app: Application): void {
   const showMainMenu = (): void => {
     clearScreens();
     showMenu({
-      onPlay: () => showDifficulty((d) => launchMatch(d, false), showMainMenu),
+      onPlay: () => launchMatch(false),
       onTutorial: () => showTutorial(),
       onRules: () => showRules(showMainMenu),
       onSettings: () => openSettings(() => showMainMenu()),
-      onResume: (d) => launchMatch(d, true),
+      onResume: () => launchMatch(true),
     });
   };
 

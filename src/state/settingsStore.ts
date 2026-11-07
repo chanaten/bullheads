@@ -6,7 +6,7 @@ type Listener = (s: Settings) => void;
 
 let hadSaved = false;
 try {
-  hadSaved = localStorage.getItem('bullheads.settings.v1') !== null;
+  hadSaved = localStorage.getItem('hyperstrike.settings.v1') !== null;
 } catch {
   hadSaved = false;
 }

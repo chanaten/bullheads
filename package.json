@@ -1,8 +1,8 @@
 {
-  "name": "bullheads",
+  "name": "hyperstrike",
   "version": "0.1.0",
   "private": true,
-  "description": "BULLHEADS! — a single-player 6nimmt! card game with arcade neon motion",
+  "description": "HYPERSTRIKE! \u2014 a galactic war card game (single-player lane combat, arcade neon motion)",
   "type": "module",
   "scripts": {
     "dev": "vite",

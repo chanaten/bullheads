@@ -9,7 +9,7 @@ import { MatchController, type UIHooks } from '../state/controller';
 import { loadMatch } from '../state/persistence';
 import { TableRenderer } from '../render/table';
 import { showMatchEnd, showScoreboard } from './overlays';
-import type { Difficulty } from '../engine/rules';
+import { sampleRoster } from '../engine/roster';
 
 export interface GameOptions {
   onRematch: () => void;
@@ -24,11 +24,7 @@ export interface GameHandle {
   destroy: () => void;
 }
 
-export function startGame(
-  app: Application,
-  difficulty: Difficulty,
-  opts: GameOptions,
-): GameHandle {
+export function startGame(app: Application, opts: GameOptions): GameHandle {
   let controller!: MatchController;
 
   const table = new TableRenderer(app, {
@@ -51,7 +47,7 @@ export function startGame(
   const saved = opts.resume ? loadMatch() : null;
   controller = saved
     ? new MatchController(saved.state, ui)
-    : MatchController.create(difficulty, ['YOU', 'Nyx', 'Flux', 'Rook', 'Kira'], ui);
+    : MatchController.create(['YOU', ...sampleRoster()], ui);
 
   void (saved ? controller.resume() : controller.start());
 

@@ -43,7 +43,7 @@ describe('stress: controller + hard tier + resume cycles', () => {
   it('plays many full matches without engine errors', async () => {
     for (let seed = 1; seed <= 25; seed++) {
       const rng = seeded(seed * 7919);
-      const ref = { current: createMatch('hard', NAMES, rng) };
+      const ref = { current: createMatch(NAMES, rng, ['hard', 'hard', 'hard', 'hard']) };
       let controller = new MatchController(ref.current, makeUI(ref), rng);
       await controller.start();
 

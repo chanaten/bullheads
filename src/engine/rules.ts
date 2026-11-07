@@ -1,5 +1,5 @@
 /**
- * Pure rules engine for 6nimmt!.
+ * Pure rules engine for the game.
  *
  * Official base rules (Amigo):
  *  - 4 rows, each starting with one card; max 5 cards per row.
@@ -7,21 +7,27 @@
  *  - If that row already has 5 cards, the player takes the 5 and the played
  *    card stays as the first card of the (new) row.
  *  - If the card is lower than every row's end card, the player chooses
- *    which row to take (usually fewest bullheads); their card starts that row.
+ *    which row to take (usually fewest damage); their card starts that row.
  *  - Cards are unique across all players — asserted, never violated.
  *
  * This module is renderer-free and deterministic given an RNG.
  */
 
-import { bullheads, fullDeck, shuffle } from './cards';
+import { damage, fullDeck, shuffle } from './cards';
 
 export const PLAYER_COUNT = 5;
 export const HAND_SIZE = 10;
 export const ROW_COUNT = 4;
 export const ROW_MAX = 5; // cards per row before a take happens
-export const MATCH_TARGET = 66;
+/** First pilot whose damage reaches this loses (HP starts at 100). */
+export const MATCH_TARGET = 100;
 
 export type Difficulty = 'normal' | 'hard' | 'asian';
+/** Per-bot algorithm tier (the match always mixes all four). */
+export type BotTier = Difficulty | 'random';
+
+/** The fixed skill spread dealt to the four bot seats each match. */
+export const BOT_COMPOSITION: readonly BotTier[] = ['normal', 'hard', 'asian', 'random'];
 
 export interface PlayerState {
   readonly id: number;
@@ -29,10 +35,12 @@ export interface PlayerState {
   hand: number[];
   /** Penalty points taken so far this match. */
   score: number;
-  /** Bullheads taken this hand (resets each hand). */
+  /** Damage taken this hand (resets each hand). */
   handScore: number;
   /** Cards gathered this hand (public info — resets each hand; not shown in UI). */
   takenCards: number[];
+  /** Bot algorithm (null for the human seat). */
+  tier: BotTier | null;
 }
 
 export interface MatchState {
@@ -43,7 +51,6 @@ export interface MatchState {
   round: number;
   /** Hands played so far (completed). */
   handsPlayed: number;
-  difficulty: Difficulty;
   /** Index of the player who is "you" (the human seat). */
   humanId: number;
   /** Monotonic event counter for renderer sync. */
@@ -58,7 +65,7 @@ export type EngineEvent =
       player: number;
       /** The 5 (or fewer, on the first take of a hand) cards gathered. */
       taken: number[];
-      bullheads: number;
+      damage: number;
       /** Row index after placement (the played card starts it). */
       row: number;
       played: number;
@@ -132,15 +139,24 @@ function deal(dealerRng: () => number = Math.random): { rows: number[][]; hands:
   return { rows, hands };
 }
 
+/**
+ * Create a match. Names cover all five seats; bot tiers default to the fixed
+ * 1x normal / 1x hard / 1x asian / 1x random composition, shuffled across
+ * seats 1-4 (seat 0 is the human). Tests may pin explicit tiers.
+ */
 export function createMatch(
-  difficulty: Difficulty,
   playerNames: readonly string[],
   rng: () => number = Math.random,
+  botTiers?: readonly BotTier[],
 ): MatchState {
   if (playerNames.length !== PLAYER_COUNT) {
     throw new Error(`expected ${PLAYER_COUNT} player names`);
   }
   const { rows, hands } = deal(rng);
+  const tiers = botTiers ? [...botTiers] : shuffle([...BOT_COMPOSITION], rng);
+  if (tiers.length !== PLAYER_COUNT - 1) {
+    throw new Error(`expected ${PLAYER_COUNT - 1} bot tiers`);
+  }
   const players: PlayerState[] = playerNames.map((name, id) => ({
     id,
     name,
@@ -148,13 +164,13 @@ export function createMatch(
     score: 0,
     handScore: 0,
     takenCards: [],
+    tier: id === 0 ? null : tiers[id - 1],
   }));
   return {
     players,
     rows,
     round: 0,
     handsPlayed: 0,
-    difficulty,
     humanId: 0,
     seq: 0,
   };
@@ -177,9 +193,9 @@ export function findTargetRow(card: number, rows: readonly number[][]): number |
   return best === -1 ? null : best;
 }
 
-/** Bullhead total of a set of cards. */
-export function totalBullheads(cards: readonly number[]): number {
-  return cards.reduce((sum, c) => sum + bullheads(c), 0);
+/** Damage total of a set of cards. */
+export function totalDamage(cards: readonly number[]): number {
+  return cards.reduce((sum, c) => sum + damage(c), 0);
 }
 
 /**
@@ -200,7 +216,7 @@ export function placeCard(
     events.push({ type: 'rowChosen', player, card, row: app.row });
   }
   if (app.took) {
-    const pts = totalBullheads(app.took);
+    const pts = totalDamage(app.took);
     state.players[player].score += pts;
     state.players[player].handScore += pts;
     state.players[player].takenCards.push(...app.took);
@@ -208,7 +224,7 @@ export function placeCard(
       type: 'rowTaken',
       player,
       taken: app.took,
-      bullheads: pts,
+      damage: pts,
       row: app.row,
       played: card,
       overflow: app.overflow,
@@ -243,7 +259,7 @@ export function isMatchOver(state: MatchState): boolean {
 }
 
 /**
- * Winners = fewest total bullheads; exact tie at the bottom = shared victory.
+ * Winners = fewest total damage; exact tie at the bottom = shared victory.
  * Only valid once the match is over.
  */
 export function winners(state: MatchState): number[] {

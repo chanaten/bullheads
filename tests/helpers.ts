@@ -6,6 +6,6 @@ export {
   createMatch,
   findTargetRow,
   isMatchOver,
-  totalBullheads,
+  totalDamage,
 } from '../src/engine/rules';
 export { chooseRow as chooseRowForTest } from '../src/ai/bots';

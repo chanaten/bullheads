@@ -2,8 +2,34 @@
 
 import type { MatchState } from '../engine/rules';
 
-const MATCH_KEY = 'bullheads.match.v1';
-const SETTINGS_KEY = 'bullheads.settings.v1';
+const MATCH_KEY = 'hyperstrike.match.v1';
+const SETTINGS_KEY = 'hyperstrike.settings.v1';
+// Legacy keys from before the rebrand: migrated once on first load, then removed.
+const LEGACY_MATCH_KEY = 'bullheads.match.v1';
+const LEGACY_SETTINGS_KEY = 'bullheads.settings.v1';
+
+/** One-time migration of legacy storage keys to hyperstrike.*. */
+function migrateLegacyKeys(): void {
+  try {
+    if (localStorage.getItem(SETTINGS_KEY) === null) {
+      const legacy = localStorage.getItem(LEGACY_SETTINGS_KEY);
+      if (legacy !== null) {
+        localStorage.setItem(SETTINGS_KEY, legacy);
+        localStorage.removeItem(LEGACY_SETTINGS_KEY);
+      }
+    }
+    if (localStorage.getItem(MATCH_KEY) === null) {
+      const legacy = localStorage.getItem(LEGACY_MATCH_KEY);
+      if (legacy !== null) {
+        localStorage.setItem(MATCH_KEY, legacy);
+        localStorage.removeItem(LEGACY_MATCH_KEY);
+      }
+    }
+  } catch {
+    // storage unavailable — nothing to migrate
+  }
+}
+migrateLegacyKeys();
 
 export interface SavedMatch {
   version: 1;
@@ -67,10 +93,38 @@ export function loadMatch(): SavedMatch | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as SavedMatch;
     if (parsed.version !== 1 || !isMatchState(parsed.state)) return null;
+    backfillTiers(parsed.state);
     return parsed;
   } catch {
     return null;
   }
+}
+
+/**
+ * Pre-rebrand saves are match-wide difficulty and have no per-bot tiers —
+ * backfill every bot with that difficulty (what the player experienced)
+ * or the default composition, and drop the old field.
+ */
+function backfillTiers(state: MatchState): void {
+  const legacy = state as MatchState & { difficulty?: string };
+  const missing = state.players.some((p) => p.id > 0 && typeof p.tier !== 'string');
+  if (!missing) return;
+  const d = legacy.difficulty;
+  const pinned: import('../engine/rules').BotTier | null =
+    d === 'hard' || d === 'asian' || d === 'normal' ? d : null;
+  const composition: import('../engine/rules').BotTier[] = ['normal', 'hard', 'asian', 'random'];
+  let ci = 0;
+  state.players.forEach((p, i) => {
+    if (i === 0) {
+      if (p.tier !== null) p.tier = null; // human seat
+      return;
+    }
+    if (typeof p.tier !== 'string') {
+      p.tier = pinned ?? composition[ci % composition.length];
+      ci++;
+    }
+  });
+  delete legacy.difficulty;
 }
 
 export function clearMatch(): void {

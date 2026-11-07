@@ -58,7 +58,8 @@ export class TableRenderer {
   private avatars: Container[] = [];
   private badgeTexts: Text[] = [];
   private badgeBoxes: Graphics[] = [];
-  private badgeValues: number[] = [];
+  private badgeFills: Graphics[] = [];
+  private hpValues: number[] = [];
   private roundText!: Text;
   private roundBar!: Graphics;
   private rowPrompt!: Text;
@@ -140,14 +141,24 @@ export class TableRenderer {
       this.badgeBoxes.push(box);
       this.hudLayer.addChild(box);
 
+      const fill = new Graphics();
+      this.badgeFills.push(fill);
+      this.hudLayer.addChild(fill);
+
       const t = new Text({
-        text: '0',
-        style: { fontFamily: 'Arial Black, sans-serif', fontSize: 16, fontWeight: '900', fill: 0xffffff },
+        text: '100',
+        style: {
+          fontFamily: 'Arial Black, sans-serif',
+          fontSize: 15,
+          fontWeight: '900',
+          fill: 0xffffff,
+          dropShadow: { color: 0x000000, alpha: 0.5, distance: 1, blur: 2 },
+        },
       });
       t.anchor.set(0.5);
       this.badgeTexts.push(t);
       this.hudLayer.addChild(t);
-      this.badgeValues.push(0);
+      this.hpValues.push(100);
     }
 
     for (let i = 0; i < 4; i++) {
@@ -181,6 +192,28 @@ export class TableRenderer {
     g.stroke({ width: 1.5, color: BOT_COLORS[i], alpha: 0.9 });
     this.badgeTexts[i].x = pos.x;
     this.badgeTexts[i].y = pos.y;
+    this.badgeFills[i].x = pos.x;
+    this.badgeFills[i].y = pos.y;
+    this.paintBadge(i);
+  }
+
+  /** HP pill fill + number: color ladder cyan → yellow → red as HP drops. */
+  private paintBadge(i: number): void {
+    const w = 58;
+    const h = 26;
+    const hp = this.hpValues[i] ?? 100;
+    const ratio = Math.max(0, Math.min(1, hp / 100));
+    const color = ratio >= 0.6 ? COLORS.cyan : ratio >= 0.3 ? COLORS.yellow : COLORS.danger;
+    const fill = this.badgeFills[i];
+    fill.clear();
+    if (ratio > 0) {
+      const fw = Math.max(6, w * ratio);
+      fill.roundRect(-w / 2, -h / 2 + 3, fw, h - 6, 5);
+      fill.fill({ color, alpha: 0.32 });
+      fill.roundRect(-w / 2, -h / 2 + 3, fw, 4, 2);
+      fill.fill({ color, alpha: 0.9 }); // top highlight line
+    }
+    this.badgeTexts[i].text = String(Math.max(0, Math.round(hp)));
   }
 
   // --------------------------------------------------------------- layout
@@ -447,13 +480,13 @@ export class TableRenderer {
         tweens.push(gsap.to(stack, { alpha: 1, duration: dur(0.4), delay: dur(0.2 + i * 0.05) }));
       }
 
-      this.badgeValues[i] = state.players[i].score;
-      this.badgeTexts[i].text = String(state.players[i].score);
+      this.hpValues[i] = Math.max(0, 100 - state.players[i].score);
       this.layoutBadge(i);
       this.badgeBoxes[i].alpha = 0;
+      this.badgeFills[i].alpha = 0;
       this.badgeTexts[i].alpha = 0;
       tweens.push(
-        gsap.to([this.badgeBoxes[i], this.badgeTexts[i]], {
+        gsap.to([this.badgeBoxes[i], this.badgeFills[i], this.badgeTexts[i]], {
           alpha: 1,
           duration: dur(0.4),
           delay: dur(0.25 + i * 0.05),
@@ -519,17 +552,27 @@ export class TableRenderer {
     ring.circle(0, 0, r + 3).stroke({ width: 3, color: BOT_COLORS[index], alpha: 0.95 });
     ring.circle(0, 0, r).fill({ color: 0x0e0c26, alpha: 0.95 });
     c.addChild(ring);
-    const initial = new Text({
-      text: (name[0] ?? '?').toUpperCase(),
-      style: {
-        fontFamily: 'Arial Black, sans-serif',
-        fontSize: 22,
-        fontWeight: '900',
-        fill: BOT_COLORS[index],
-      },
-    });
-    initial.anchor.set(0.5);
-    c.addChild(initial);
+
+    // top-down fighter jet, nose up, tinted per seat (units of r)
+    const jet = new Graphics();
+    const half: [number, number][] = [
+      [0, -0.85], // nose
+      [0.14, -0.25],
+      [0.62, 0.18], // wing tip (back-swept)
+      [0.62, 0.32],
+      [0.16, 0.26],
+      [0.3, 0.62], // tail fin
+      [0.3, 0.74],
+      [0.07, 0.66],
+      [0, 0.8],
+    ];
+    const pts: number[] = [];
+    for (const [px, py] of half) pts.push(px * r, py * r);
+    for (let i = half.length - 2; i >= 1; i--) pts.push(-half[i][0] * r, half[i][1] * r);
+    jet.poly(pts).fill(BOT_COLORS[index]);
+    jet.ellipse(0, -r * 0.3, r * 0.11, r * 0.19).fill({ color: 0x0e0c26, alpha: 0.9 }); // cockpit
+    c.addChild(jet);
+
     const label = new Text({
       text: name,
       style: {
@@ -760,14 +803,14 @@ export class TableRenderer {
     settle(staged.view.container);
 
     if (taken && taken.type === 'rowTaken') {
-      await this.animateTake(row, player, taken.bullheads, taken.taken.length);
+      await this.animateTake(row, player, taken.damage, taken.taken.length);
     }
   }
 
   private async animateTake(
     row: number,
     player: number,
-    bullheadTotal: number,
+    damageAmount: number,
     takenCount: number,
   ): Promise<void> {
     const L = this.layout;
@@ -775,7 +818,7 @@ export class TableRenderer {
     const taken = cards.slice(0, takenCount);
     const survivor = cards[takenCount];
 
-    play('rowTake', { intensity: bullheadTotal });
+    play('rowTake', { intensity: damageAmount });
 
     // penalty flash on the gathered cards
     for (const c of taken) {
@@ -794,8 +837,8 @@ export class TableRenderer {
       ),
     );
     // big floating damage number: pops up from the row, arcs into the taker
-    const damage = this.showDamageNumber(row, player, bullheadTotal);
-    if (bullheadTotal >= 10) {
+    const damage = this.showDamageNumber(row, player, damageAmount);
+    if (damageAmount >= 10) {
       shake(this.root, 10);
       burst(this.fxLayer, L.rowOriginX + L.rowCard.w * 3, L.rowY(row) + L.rowCard.h / 2, COLORS.danger, {
         count: 16,
@@ -881,16 +924,22 @@ export class TableRenderer {
     text.destroy();
   }
 
-  private bumpBadge(player: number, to: number): void {
-    const from = this.badgeValues[player];
+  /** Hit landed: HP slides down to the new value (the bar visibly shrinks). */
+  private bumpBadge(player: number, toDamage: number): void {
+    const to = Math.max(0, 100 - toDamage);
+    const from = this.hpValues[player];
     const obj = { v: from };
     gsap.to(obj, {
       v: to,
       duration: dur(0.6),
       ease: 'power1.out',
       onUpdate: () => {
-        this.badgeValues[player] = Math.round(obj.v);
-        this.badgeTexts[player].text = String(this.badgeValues[player]);
+        this.hpValues[player] = obj.v;
+        this.paintBadge(player);
+      },
+      onComplete: () => {
+        this.hpValues[player] = to;
+        this.paintBadge(player);
       },
     });
     const box = this.badgeBoxes[player];
@@ -952,7 +1001,7 @@ export class TableRenderer {
       if (hs <= 0) continue;
       const pos = this.layout.badges[i];
       const t = new Text({
-        text: `+${hs}`,
+        text: `−${hs}`,
         style: {
           fontFamily: 'Arial Black, sans-serif',
           fontSize: 20,

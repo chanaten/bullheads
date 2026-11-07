@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MatchController, type UIHooks } from '../src/state/controller';
 import { chooseCard } from '../src/ai/bots';
-import { type EngineEvent, createMatch, isMatchOver, totalBullheads } from './helpers';
+import { type EngineEvent, createMatch, isMatchOver, totalDamage } from './helpers';
 import { clearMatch, loadMatch } from '../src/state/persistence';
 
 function seeded(seed: number): () => number {
@@ -64,7 +64,7 @@ describe('MatchController', () => {
     installLocalStorage();
     const log: Log = { events: [], asks: 0, scoreboards: 0, matchEnds: [] };
     const rng = seeded(11);
-    const controller = MatchController.create('normal', NAMES, makeUI(log), rng);
+    const controller = MatchController.create(NAMES, makeUI(log), rng);
 
     await controller.start();
     let guard = 0;
@@ -91,7 +91,7 @@ describe('MatchController', () => {
     clearMatch();
     const log: Log = { events: [], asks: 0, scoreboards: 0, matchEnds: [] };
     const rng = seeded(22);
-    const controller = MatchController.create('normal', NAMES, makeUI(log), rng);
+    const controller = MatchController.create(NAMES, makeUI(log), rng);
     await controller.start();
 
     const card = chooseCard(controller.state, 0, { policy: 'greedy-dump', rng });
@@ -114,7 +114,7 @@ describe('MatchController', () => {
     installLocalStorage();
     const log: Log = { events: [], asks: 0, scoreboards: 0, matchEnds: [] };
     const ui = makeUI(log, 2);
-    const state = createMatch('normal', NAMES, seeded(44));
+    const state = createMatch(NAMES, seeded(44));
     // Fully scripted table: every bot card lands safely, human's 5 is lower
     // than all row ends and must choose a row.
     state.rows = [[30], [50], [70], [90]];
@@ -130,7 +130,7 @@ describe('MatchController', () => {
 
     expect(log.asks).toBe(1);
     expect(state.rows[2]).toEqual([5]); // chosen row gathered, played card stays
-    expect(state.players[0].handScore).toBe(totalBullheads([70])); // human scored
+    expect(state.players[0].handScore).toBe(totalDamage([70])); // human scored
     expect(controller.phase).toBe('choosing');
     expect(state.round).toBe(1);
   }, 30_000);
@@ -138,7 +138,7 @@ describe('MatchController', () => {
   it('ignores human input outside the choosing phase', async () => {
     installLocalStorage();
     const log: Log = { events: [], asks: 0, scoreboards: 0, matchEnds: [] };
-    const controller = MatchController.create('normal', NAMES, makeUI(log), seeded(55));
+    const controller = MatchController.create(NAMES, makeUI(log), seeded(55));
     await controller.start();
     const before = controller.state.players[0].hand.length;
     await controller.humanPlay(104); // not held → ignored

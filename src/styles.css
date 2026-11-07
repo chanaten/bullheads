@@ -1,4 +1,4 @@
-/* BULLHEADS! — arcade neon shell */
+/* HYPERSTRIKE! — arcade neon shell */
 
 *,
 *::before,
@@ -284,83 +284,6 @@ body {
   98% {
     opacity: 1;
   }
-}
-
-/* ---- difficulty select ---- */
-
-.panel-title.big {
-  font-size: 26px;
-}
-
-.difficulty-row {
-  display: flex;
-  gap: 22px;
-}
-
-.tier-card {
-  pointer-events: auto;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  width: 230px;
-  padding: 22px 24px;
-  border-radius: 14px;
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
-  color: var(--ink);
-  transition:
-    transform 0.14s ease,
-    box-shadow 0.14s ease,
-    border-color 0.14s ease;
-}
-
-.tier-card:hover,
-.tier-card:focus-visible {
-  transform: translateY(-4px);
-  outline: none;
-}
-
-.tier-normal:hover {
-  border-color: var(--neon-cyan);
-  box-shadow: 0 0 18px rgba(77, 243, 255, 0.4);
-}
-
-.tier-hard:hover {
-  border-color: var(--neon-yellow);
-  box-shadow: 0 0 18px rgba(255, 216, 77, 0.4);
-}
-
-.tier-asian:hover {
-  border-color: var(--neon-magenta);
-  box-shadow: 0 0 18px rgba(255, 77, 216, 0.45);
-}
-
-.tier-name {
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  font-size: 20px;
-  margin-bottom: 8px;
-}
-
-.tier-normal .tier-name {
-  color: var(--neon-cyan);
-  text-shadow: 0 0 10px rgba(77, 243, 255, 0.55);
-}
-
-.tier-hard .tier-name {
-  color: var(--neon-yellow);
-  text-shadow: 0 0 10px rgba(255, 216, 77, 0.55);
-}
-
-.tier-asian .tier-name {
-  color: var(--neon-magenta);
-  text-shadow: 0 0 10px rgba(255, 77, 216, 0.6);
-}
-
-.tier-desc {
-  color: var(--ink-dim);
-  font-size: 13px;
-  line-height: 1.45;
 }
 
 /* ---- settings / rules / pause ---- */

@@ -54,7 +54,7 @@ function playHandToEnd(state: MatchState, rng: () => number, policy: Policy): vo
 
 function playPoolMatch(difficulty: Difficulty, seed: number) {
   const rng = seeded(seed);
-  const state = createMatch(difficulty, NAMES, rng);
+  const state = createMatch(NAMES, rng, [difficulty, difficulty, difficulty, difficulty]);
   let hands = 0;
   for (;;) {
     playHandToEnd(state, rng, tierPolicy(difficulty));
@@ -88,7 +88,7 @@ function avgHeroScore(difficulty: Difficulty, seeds: number[]): number {
   for (const seed of seeds) {
     const dealRng = seeded(seed);
     const aiRng = seeded(seed ^ 0x9e3779b9);
-    const state = createMatch('asian', NAMES, dealRng);
+    const state = createMatch(NAMES, dealRng);
     const hero = tierPolicy(difficulty);
     let hands = 0;
     for (;;) {
