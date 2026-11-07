@@ -1,5 +1,6 @@
 /**
- * Boot: PixiJS stage (starfield + softened grid backdrop) → app screen manager.
+ * Boot: PixiJS stage (forward-flying starfield + softened grid backdrop)
+ * → app screen manager.
  */
 
 import './styles.css';
@@ -11,13 +12,28 @@ import { motionFull } from './render/motion';
 const BG = 0x12102a;
 const GRID = 0x2a2660;
 
-/** Slow parallax drift, px/sec per layer (static under reduced motion). */
-const STAR_SPEEDS = [3, 7, 13];
-const STAR_SPECS = [
-  { size: 1.2, alpha: 0.35, tint: 0xffffff, density: 0.000045 },
-  { size: 1.8, alpha: 0.5, tint: 0xcfe6ff, density: 0.000026 },
-  { size: 2.4, alpha: 0.7, tint: 0x9fd8ff, density: 0.000013 },
+/**
+ * Three depth layers of stars streaming toward the viewer (fake-3D pilot
+ * view): stars fly out from the vanishing point at screen center, growing
+ * as they approach. Speeds in z-units/sec — kept calm; fully static when
+ * motion is reduced.
+ */
+const STAR_LAYERS = [
+  { count: 70, size: 1.3, alpha: 0.4, speed: 0.18, tint: 0xffffff, warm: false },
+  { count: 50, size: 1.9, alpha: 0.55, speed: 0.3, tint: 0xcfe6ff, warm: false },
+  { count: 30, size: 2.7, alpha: 0.75, speed: 0.5, tint: 0x9fd8ff, warm: false },
 ];
+const Z_NEAR = 0.4;
+const Z_FAR = 4;
+
+interface Star {
+  g: Graphics;
+  nx: number; // -1..1 across the field
+  ny: number;
+  z: number;
+  speed: number;
+  alphaBase: number;
+}
 
 interface Backdrop {
   root: Container;
@@ -28,21 +44,49 @@ interface Backdrop {
 function buildBackdrop(app: Application): Backdrop {
   const root = new Container();
   const grid = new Graphics();
-  const starLayers: Container[] = [];
-
-  // three parallax star layers, each drawn across 2× width for seamless wrap
-  for (let i = 0; i < STAR_SPECS.length; i++) {
-    const layer = new Container();
-    starLayers.push(layer);
-  }
-  // stars behind, faint console grid over them
-  for (const layer of starLayers) root.addChild(layer);
+  const starsLayer = new Container();
+  root.addChild(starsLayer);
   root.addChild(grid);
+
+  // build star sprites once (positions re-projected every frame/resize)
+  const stars: Star[] = [];
+  STAR_LAYERS.forEach((spec) => {
+    for (let i = 0; i < spec.count; i++) {
+      const g = new Graphics();
+      const warm = Math.random() < 0.12;
+      g.circle(0, 0, spec.size).fill({
+        color: warm ? 0xffe9b0 : spec.tint,
+        alpha: spec.alpha,
+      });
+      starsLayer.addChild(g);
+      stars.push({
+        g,
+        nx: Math.random() * 2 - 1,
+        ny: Math.random() * 2 - 1,
+        z: Z_NEAR + Math.random() * (Z_FAR - Z_NEAR),
+        speed: spec.speed,
+        alphaBase: spec.alpha,
+      });
+    }
+  });
+
+  const project = (): void => {
+    const { width, height } = app.screen;
+    const cx = width / 2;
+    const cy = height / 2;
+    const persp = Math.min(width, height) * 0.78;
+    for (const s of stars) {
+      s.g.x = cx + (s.nx * persp) / s.z;
+      s.g.y = cy + (s.ny * persp * 0.62) / s.z;
+      s.g.scale.set(1 / s.z);
+      s.g.alpha = Math.min(1, s.alphaBase * (1.45 / s.z));
+    }
+  };
 
   const redraw = (): void => {
     const { width, height } = app.screen;
 
-    // softened grid
+    // softened console grid over the starfield
     grid.clear();
     grid.setStrokeStyle({ width: 1, color: GRID, alpha: 0.22 });
     const step = 64;
@@ -56,38 +100,24 @@ function buildBackdrop(app: Application): Backdrop {
     }
     grid.stroke();
 
-    // stars: two copies side by side so the wrap is seamless
-    starLayers.forEach((layer, li) => {
-      layer.removeChildren().forEach((c) => c.destroy());
-      const spec = STAR_SPECS[li];
-      const count = Math.max(24, Math.min(200, Math.round(width * height * spec.density)));
-      const g = new Graphics();
-      for (let copy = 0; copy < 2; copy++) {
-        const ox = copy * width;
-        for (let i = 0; i < count; i++) {
-          const x = ox + Math.random() * width;
-          const y = Math.random() * height;
-          const warm = Math.random() < 0.12;
-          g.circle(x, y, spec.size).fill({
-            color: warm ? 0xffe9b0 : spec.tint,
-            alpha: spec.alpha * (0.6 + Math.random() * 0.4),
-          });
-        }
-      }
-      layer.addChild(g);
-    });
+    project();
   };
   redraw();
 
-  // slow drift — freezes entirely when motion is reduced
+  // forward flight: z shrinks, stars swell and sweep outward past the edges
   const drift = (ticker: Ticker): void => {
     if (!motionFull()) return;
     const dt = ticker.deltaMS / 1000;
-    const w = app.screen.width;
-    starLayers.forEach((layer, i) => {
-      layer.x -= STAR_SPEEDS[i] * dt;
-      if (layer.x <= -w) layer.x += w;
-    });
+    for (const s of stars) {
+      s.z -= s.speed * dt;
+      if (s.z <= Z_NEAR) {
+        // respawn far ahead near the vanishing point
+        s.z = Z_FAR + Math.random() * 0.6;
+        s.nx = Math.random() * 2 - 1;
+        s.ny = Math.random() * 2 - 1;
+      }
+    }
+    project();
   };
   app.ticker.add(drift);
 

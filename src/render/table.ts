@@ -182,7 +182,6 @@ export class TableRenderer {
   }
 
   private layoutBadge(i: number): void {
-    if (this.destroyed) return;
     const pos = this.layout.badges[i];
     const w = 58;
     const h = 26;
@@ -201,7 +200,6 @@ export class TableRenderer {
   /** HP pill fill + number: tinted with the seat's own color; the bar
    *  shrinks as HP drops. Fill is inset evenly inside the pill frame. */
   private paintBadge(i: number): void {
-    if (this.destroyed) return;
     const w = 58;
     const h = 26;
     const hp = this.hpValues[i] ?? 100;
@@ -221,7 +219,6 @@ export class TableRenderer {
   // --------------------------------------------------------------- layout
 
   relayout(): void {
-    if (this.destroyed) return;
     this.layout = computeLayout(this.app.screen.width, this.app.screen.height);
     this.app.stage.hitArea = this.app.screen;
     const L = this.layout;
@@ -372,7 +369,6 @@ export class TableRenderer {
   }
 
   private drawRoundBar(): void {
-    if (this.destroyed) return;
     const L = this.layout;
     const round = this.state?.round ?? 0;
     this.roundText.text = t('game.round', { n: Math.min(round + 1, 10) });
@@ -392,7 +388,6 @@ export class TableRenderer {
   }
 
   private paintRowGlow(): void {
-    if (this.destroyed) return;
     this.rowGlow.clear();
     gsap.killTweensOf(this.rowGlow);
     this.rowGlow.alpha = 1;
@@ -1048,18 +1043,8 @@ export class TableRenderer {
   }
 
   destroy(): void {
-    if (this.destroyed) return;
     this.destroyed = true;
     window.removeEventListener('resize', this.onWindowResize);
-    // Release everything awaiting inside hooks so in-flight chains drain
-    // instead of hanging on a dead table (leave-mid-round races).
-    this.endBeat();
-    const paused = this.pauseWaiters;
-    this.pauseWaiters = [];
-    paused.forEach((w) => w());
-    const choose = this.rowChoiceResolve;
-    this.rowChoiceResolve = null;
-    choose?.(0);
     gsap.globalTimeline.getChildren().forEach((t) => t.kill());
     this.root.destroy({ children: true });
   }
