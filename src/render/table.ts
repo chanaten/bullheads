@@ -210,8 +210,6 @@ export class TableRenderer {
       const fw = Math.max(6, w * ratio);
       fill.roundRect(-w / 2, -h / 2 + 3, fw, h - 6, 5);
       fill.fill({ color, alpha: 0.32 });
-      fill.roundRect(-w / 2, -h / 2 + 3, fw, 4, 2);
-      fill.fill({ color, alpha: 0.9 }); // top highlight line
     }
     this.badgeTexts[i].text = String(Math.max(0, Math.round(hp)));
   }
