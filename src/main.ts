@@ -70,10 +70,29 @@ function buildBackdrop(app: Application): Backdrop {
     }
   });
 
+  // The center of view (vanishing point) leans toward the cursor — the
+  // pilot's gaze follows the pointer — and eases back to center on leave.
+  const VP_FACTOR = 0.16;
+  let targetNX = 0;
+  let targetNY = 0;
+  let vpX = 0;
+  let vpY = 0;
+  const onPointerMove = (e: PointerEvent): void => {
+    const { width, height } = app.screen;
+    targetNX = Math.max(-1, Math.min(1, (e.clientX - width / 2) / (width / 2)));
+    targetNY = Math.max(-1, Math.min(1, (e.clientY - height / 2) / (height / 2)));
+  };
+  const onPointerLeave = (): void => {
+    targetNX = 0;
+    targetNY = 0;
+  };
+  window.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('mouseleave', onPointerLeave);
+
   const project = (): void => {
     const { width, height } = app.screen;
-    const cx = width / 2;
-    const cy = height / 2;
+    const cx = width / 2 + vpX;
+    const cy = height / 2 + vpY;
     const persp = Math.min(width, height) * 0.78;
     for (const s of stars) {
       s.g.x = cx + (s.nx * persp) / s.z;
@@ -104,10 +123,15 @@ function buildBackdrop(app: Application): Backdrop {
   };
   redraw();
 
-  // forward flight: z shrinks, stars swell and sweep outward past the edges
+  // forward flight: z shrinks, stars swell and sweep outward past the edges;
+  // the center of view eases toward the cursor each frame
   const drift = (ticker: Ticker): void => {
     if (!motionFull()) return;
     const dt = ticker.deltaMS / 1000;
+    const { width, height } = app.screen;
+    const ease = 1 - Math.exp(-3.2 * dt); // frame-rate independent smoothing
+    vpX += (targetNX * (width / 2) * VP_FACTOR - vpX) * ease;
+    vpY += (targetNY * (height / 2) * VP_FACTOR - vpY) * ease;
     for (const s of stars) {
       s.z -= s.speed * dt;
       if (s.z <= Z_NEAR) {
@@ -121,11 +145,20 @@ function buildBackdrop(app: Application): Backdrop {
   };
   app.ticker.add(drift);
 
+  // dev/test aid: current center-of-view offset
+  (window as unknown as Record<string, unknown>).__starfield = () => ({
+    x: Math.round(vpX),
+    y: Math.round(vpY),
+  });
+
   return {
     root,
     redraw,
     destroy: () => {
       app.ticker.remove(drift);
+      window.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('mouseleave', onPointerLeave);
+      delete (window as unknown as Record<string, unknown>).__starfield;
       root.destroy({ children: true });
     },
   };
