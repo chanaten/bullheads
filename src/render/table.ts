@@ -197,19 +197,21 @@ export class TableRenderer {
     this.paintBadge(i);
   }
 
-  /** HP pill fill + number: color ladder cyan → yellow → red as HP drops. */
+  /** HP pill fill + number: tinted with the seat's own color; the bar
+   *  shrinks as HP drops. Fill is inset evenly inside the pill frame. */
   private paintBadge(i: number): void {
     const w = 58;
     const h = 26;
     const hp = this.hpValues[i] ?? 100;
     const ratio = Math.max(0, Math.min(1, hp / 100));
-    const color = ratio >= 0.6 ? COLORS.cyan : ratio >= 0.3 ? COLORS.yellow : COLORS.danger;
+    const color = BOT_COLORS[i];
+    const inset = 3;
     const fill = this.badgeFills[i];
     fill.clear();
     if (ratio > 0) {
-      const fw = Math.max(6, w * ratio);
-      fill.roundRect(-w / 2, -h / 2 + 3, fw, h - 6, 5);
-      fill.fill({ color, alpha: 0.32 });
+      const fw = Math.max(4, (w - inset * 2) * ratio);
+      fill.roundRect(-w / 2 + inset, -h / 2 + inset, fw, h - inset * 2, 5);
+      fill.fill({ color, alpha: 0.35 });
     }
     this.badgeTexts[i].text = String(Math.max(0, Math.round(hp)));
   }
